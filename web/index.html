@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>报文解析</title>
+<script src="./vendor/vue.global.prod.js"></script>
+<style>
+  :root { --b:#1f2733; --m:#68758a; --line:#e3e8ef; --bg:#f5f7fa; --ok:#0a7d43; --bad:#c62828; }
+  * { box-sizing: border-box; }
+  body { margin:0; font:14px/1.6 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif; color:var(--b); background:var(--bg); }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 24px 16px 64px; }
+  h1 { font-size: 20px; margin: 0 0 16px; }
+  .bar { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:10px; color:var(--m); }
+  select, button { border:1px solid var(--line); border-radius:6px; padding:6px 10px; background:#fff; font-size:13px; }
+  button { cursor:pointer; }
+  button.primary { background:var(--b); color:#fff; border-color:var(--b); }
+  textarea { width:100%; min-height:110px; border:1px solid var(--line); border-radius:8px; padding:10px; font-family:ui-monospace,Menlo,monospace; font-size:12px; resize:vertical; }
+  .result { background:#fff; border:1px solid var(--line); border-radius:10px; padding:14px 16px; margin-top:14px; }
+  .result h2 { font-size:15px; margin:0; }
+  .bad { color:var(--bad); } .okc { color:var(--ok); }
+  h3.sec { font-size:13px; color:var(--m); margin:14px 0 4px; }
+  .row { display:flex; gap:10px; padding:3px 0; border-bottom:1px dashed var(--line); align-items:baseline; }
+  .row:hover { background:#fafbfd; }
+  .label { flex:0 0 260px; color:var(--b); }
+  .value { flex:1; min-width:0; overflow-wrap:anywhere; }
+  .unit { color:var(--m); }
+  .raw { color:var(--m); font-family:ui-monospace,Menlo,monospace; font-size:11px; white-space:pre-wrap; word-break:break-all; overflow-wrap:anywhere; min-width:0; }
+  .note { color:var(--m); font-size:12px; }
+  .check-ok { color:var(--ok); font-size:12px; } .check-bad { color:var(--bad); font-size:12px; }
+  .kids { margin-left:14px; border-left:2px solid var(--bg); padding-left:10px; margin-top:2px; }
+  .issues { margin-top:10px; }
+  .issue { background:#fdf0ef; border:1px solid #f3c3bf; border-radius:6px; padding:5px 9px; margin-top:5px; font-size:12px; }
+  .issue .code { font-family:ui-monospace,monospace; color:var(--bad); margin-right:6px; }
+  .empty { color:var(--m); margin-top:18px; }
+</style>
+</head>
+<body>
+<div id="app" class="wrap">
+  <h1>国标报文解析</h1>
+
+  <div class="bar">
+    <select v-model="protocol" @change="onProtocol">
+      <option v-for="p in protocols" :key="p.id" :value="p">{{ p.label }}</option>
+    </select>
+    <select v-model="version" @change="onVersion">
+      <option v-for="v in protocol.versions" :key="v.version" :value="v.version">{{ v.version }}</option>
+    </select>
+    <select v-model="vendor">
+      <option v-for="v in vendors" :key="v" :value="v">{{ v }}</option>
+    </select>
+    <button class="primary" @click="parse">解析</button>
+  </div>
+
+  <textarea v-model="hexText" placeholder="粘贴 hex 报文（多条报文用空行分隔）"></textarea>
+
+  <div v-if="!results.length" class="empty">输入报文点「解析」即可看到明文与问题提示。</div>
+
+  <div v-for="(r, ri) in results" :key="ri" class="result">
+    <h2>{{ r.report }} <span :class="r.ok ? 'okc' : 'bad'">{{ r.ok ? '✓' : '⚠' }}</span></h2>
+
+    <div v-for="(is, ii) in r.issues" :key="ii" class="issues">
+      <div class="issue"><span class="code">{{ is.code }}</span>{{ is.message }} <span class="note">@{{ is.path }}</span></div>
+    </div>
+
+    <h3 class="sec">报文头</h3>
+    <div v-for="n in r.header" :key="n.id"><field-node :node="n"></field-node></div>
+
+    <h3 class="sec">数据体</h3>
+    <div v-if="!r.body || !r.body.length" class="note">（无数据体）</div>
+    <div v-for="n in r.body" :key="n.id"><field-node :node="n"></field-node></div>
+  </div>
+</div>
+
+<script>
+const { createApp } = Vue;
+
+// 字段树：label | value(+unit) | note/check | raw，children 递归
+const FieldNode = {
+  name: 'field-node',
+  props: { node: { type: Object, required: true } },
+  computed: {
+    val() {
+      const n = this.node;
+      if (n.value == null || n.value === '') return '';
+      return String(n.value);
+    }
+  },
+  template: `
+    <div class="node">
+      <div class="row" v-if="node.label">
+        <span class="label">{{ node.label }}</span>
+        <span class="value">{{ val }} <span class="unit">{{ node.unit || '' }}</span>
+          <span class="note" v-if="node.note">{{ node.note }}</span>
+          <span :class="String(node.check||'').includes('不符') ? 'check-bad' : 'check-ok'" v-if="node.check">{{ node.check }}</span>
+        </span>
+        <span class="raw" v-if="node.raw">{{ node.raw }}</span>
+      </div>
+      <div class="kids" v-if="node.children && node.children.length">
+        <field-node v-for="(c, i) in node.children" :key="i" :node="c"></field-node>
+      </div>
+    </div>`
+};
+
+const app = createApp({
+  components: { 'field-node': FieldNode },
+  data() {
+    return {
+      protocols: [],
+      protocol: {},
+      version: '',
+      vendors: [],
+      vendor: '',
+      hexText: '',
+      results: []
+    };
+  },
+  created() {
+    fetch('/api/protocols').then(r => r.json()).then(list => {
+      if (list && list.length) {
+        this.protocols = list;
+        this.selectProtocol(list[0]);
+      }
+    }).catch(() => {});
+  },
+  methods: {
+    selectProtocol(p) {
+      this.protocol = p;
+      const v = p.versions && p.versions[0];
+      this.version = v ? v.version : '';
+      this.vendors = v ? (v.vendors || []) : [];
+      this.vendor = this.vendors[0] || '';
+    },
+    onProtocol() { this.selectProtocol(this.protocol); },
+    onVersion() {
+      const v = this.protocol.versions.find(x => x.version === this.version);
+      this.vendors = v ? (v.vendors || []) : [];
+      this.vendor = this.vendors[0] || '';
+    },
+    async parse() {
+      const body = { protocol: this.protocol.id, version: this.version, vendor: this.vendor || null, hex: this.hexText };
+      const resp = await fetch('/api/parse', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+      });
+      const json = await resp.json();
+      this.results = json.results || [];
+    }
+  }
+});
+app.mount('#app');
+</script>
+</body>
+</html>

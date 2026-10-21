@@ -1,0 +1,476 @@
+# GB/T 32960.3-2016 通信协议及数据格式（国标基准）
+#
+# 结构：命令码 → name / body（字段列表）/ subtype（类型码 → name / body）。
+# body 与 subtype 可以并存：body 是子报文之前的固定前缀（如 0x02 的采集时间）。
+# 字段没有 id：节点标识、issue path、$ 变量引用统一用 label。
+# 字段统一使用 block 缩进；map / bits 按「原值 → 中文」逐行列出，未命中时显示原值。
+#
+# 有标注 TODO 的数据体/字段尚未逐条核对标准原文，均先原样保留(raw)；
+# 施工纪律（AGENTS.md）：禁止凭记忆编造字段，核对一条补齐一条，并配 samples 回归样例。
+protocol: gc-32960
+version: "2016"
+label: GB/T 32960.3 新能源汽车国标
+
+"0x01":
+  name: 车辆登录
+  body:
+    - label: 登录时间
+      type: dec-time
+    - label: 登录序号
+      type: u2
+
+"0x02":
+  name: 实时信息上报
+  body:
+    - label: 数据采集时间
+      type: dec-time
+  subtype:
+    "0x01":
+      name: 整车数据
+      body:
+        - label: 车辆状态
+          type: u1
+          map:
+            "0x01": 启动态
+            "0x02": 熄火
+            "0x03": 其他状态
+            "0xFE": 异常
+            "0xFF": 无效
+        - label: 充电状态
+          type: u1
+          map:
+            "0x01": 停车充电
+            "0x02": 行驶充电
+            "0x03": 未充电状态
+            "0x04": 充电完成
+            "0xFE": 异常
+            "0xFF": 无效
+        - label: 运行模式
+          type: u1
+          map:
+            "0x01": 纯电
+            "0x02": 混动
+            "0x03": 燃油
+            "0xFE": 异常
+            "0xFF": 无效
+        - label: 车速
+          type: u2
+          scale: 0.1
+          unit: km/h
+        - label: 累计里程
+          type: u4
+          scale: 0.1
+          unit: km
+        - label: 总电压
+          type: u2
+          scale: 0.1
+          unit: V
+        - label: 总电流
+          type: u2
+          offset: 1000
+          scale: 0.1
+          unit: A
+        - label: SOC
+          type: u1
+          unit: "%"
+        - label: DC-DC状态
+          type: u1
+          map:
+            "0x01": 工作
+            "0x02": 断开
+            "0xFE": 异常
+            "0xFF": 无效
+        - label: 档位
+          type: u1
+        - label: 绝缘电阻
+          type: u2
+          unit: kΩ
+        - label: 加速踏板行程值
+          type: u1
+          unit: "%"
+        - label: 制动踏板状态
+          type: u1
+          unit: "%"
+
+    "0x02":
+      name: 驱动电机数据
+      body:
+        - label: 驱动电机个数
+          type: u1
+        - label: 驱动电机总成信息列表
+          type: group
+          count: "$驱动电机个数"
+          fields:
+            - label: 驱动电机序号
+              type: u1
+            - label: 驱动电机状态
+              type: u1
+              map:
+                "0x01": 耗电
+                "0x02": 发电
+                "0x03": 关闭状态
+            - label: 电机控制器温度
+              type: u1
+              offset: 40
+              unit: ℃
+            - label: 驱动电机转速
+              type: u2
+              offset: 30000
+              unit: r/min
+            - label: 驱动电机温度
+              type: u1
+              offset: 40
+              unit: ℃
+            - label: 驱动电机转矩
+              type: u2
+              offset: 20000
+              scale: 0.1
+              unit: N·m
+            - label: 电机控制器输入电压
+              type: u2
+              scale: 0.1
+              unit: V
+            - label: 电机控制器直流母线电流
+              type: u2
+              offset: 1000
+              scale: 0.1
+              unit: A
+
+    "0x03":
+      name: 燃料电池数据
+      body:
+        - label: 燃料电池电压
+          type: u2
+          scale: 0.1
+          unit: V
+        - label: 燃料电池电流
+          type: u2
+          scale: 0.1
+          unit: A
+        - label: 燃料消耗率
+          type: u2
+          scale: 0.01
+          unit: kg/100km
+        - label: 燃料电池温度探针总数
+          type: u2
+        - label: 探针温度值
+          type: group
+          count: "$燃料电池温度探针总数"
+          fields:
+            - label: 探针温度
+              type: u1
+              offset: 40
+              unit: ℃
+        - label: 氢系统中最高温度
+          type: u2
+          scale: 0.01
+          offset: 4000
+          unit: ℃
+        - label: 氢系统中最高温度探针代号
+          type: u1
+        - label: 氢气最高浓度
+          type: u2
+          unit: mg/kg
+        - label: 氢气最高浓度传感器代号
+          type: u1
+        - label: 氢气最高压力
+          type: u2
+          scale: 0.1
+          unit: MPa
+        - label: 氢气最高压力传感器代号
+          type: u1
+        - label: 高压DC-DC状态
+          type: u1
+          map:
+            "0x01": 工作
+            "0x02": 断开
+            "0xFE": 异常
+            "0xFF": 无效
+
+    "0x04":
+      name: 发动机数据
+      body:
+        - label: 发动机状态
+          type: u1
+          map:
+            "0x01": 启动状态
+            "0x02": 关闭状态
+            "0xFE": 异常
+            "0xFF": 无效
+        - label: 曲轴转速
+          type: u2
+          unit: r/min
+        - label: 燃料消耗率
+          type: u2
+          scale: 0.01
+          unit: L/100km
+
+    "0x05":
+      name: 车辆位置数据
+      body:
+        - label: 定位状态
+          type: u1
+          bits:
+            "0": 无效定位
+            "1": 南纬
+            "2": 西经
+        - label: 经度
+          type: u4
+          scale: 0.000001
+          unit: "°"
+        - label: 纬度
+          type: u4
+          scale: 0.000001
+          unit: "°"
+
+    "0x06":
+      name: 极值数据
+      body:
+        - label: 最高电压电池子系统号
+          type: u1
+        - label: 最高电压电池单体代号
+          type: u1
+        - label: 电池单体电压最高值
+          type: u2
+          scale: 0.001
+          unit: V
+        - label: 最低电压电池子系统号
+          type: u1
+        - label: 最低电压电池单体代号
+          type: u1
+        - label: 电池单体电压最低值
+          type: u2
+          scale: 0.001
+          unit: V
+        - label: 最高温度子系统号
+          type: u1
+        - label: 最高温度探针序号
+          type: u1
+        - label: 最高温度值
+          type: u1
+          offset: 40
+          unit: ℃
+        - label: 最低温度子系统号
+          type: u1
+        - label: 最低温度探针序号
+          type: u1
+        - label: 最低温度值
+          type: u1
+          offset: 40
+          unit: ℃
+
+    "0x07":
+      name: 报警数据
+      body:
+        - label: 最高报警等级
+          type: u1
+          map:
+            "0x00": 无故障
+            "0x01": 一级故障
+            "0x02": 二级故障
+            "0x03": 三级故障
+            "0xFE": 异常
+            "0xFF": 无效
+        - label: 通用报警标志
+          type: u4
+          bits:
+            "0": 温度差异报警
+            "1": 电池高温报警
+            "2": 车载储能装置类型过压报警
+            "3": 车载储能装置类型欠压报警
+            "4": SOC低报警
+            "5": 电池单体过压报警
+            "6": 电池单体欠压报警
+            "7": SOC过高报警
+            "8": SOC跳变报警
+            "9": 可充电储能系统不匹配报警
+            "10": 电池单体一致性差报警
+            "11": 绝缘报警
+            "12": DC-DC温度报警
+            "13": 制动系统报警
+            "14": DC-DC状态报警
+            "15": 驱动电机控制器温度报警
+            "16": 高压互锁状态报警
+            "17": 驱动电机温度报警
+            "18": 车载储能装置类型过充
+        - label: 可充电储能装置故障总数
+          type: u1
+        - label: 可充电储能装置故障代码列表
+          type: group
+          count: "$可充电储能装置故障总数"
+          fields:
+            - label: 故障代码
+              type: raw
+              length: 4
+        - label: 驱动电机故障总数
+          type: u1
+        - label: 驱动电机故障代码列表
+          type: group
+          count: "$驱动电机故障总数"
+          fields:
+            - label: 故障代码
+              type: raw
+              length: 4
+        - label: 发动机故障总数
+          type: u1
+        - label: 发动机故障代码列表
+          type: group
+          count: "$发动机故障总数"
+          fields:
+            - label: 故障代码
+              type: raw
+              length: 4
+        - label: 其他故障总数
+          type: u1
+        - label: 其他故障代码列表
+          type: group
+          count: "$其他故障总数"
+          fields:
+            - label: 故障代码
+              type: raw
+              length: 4
+
+    "0x08":
+      name: 可充电储能装置电压数据
+      body:
+        - label: 可充电储能子系统个数
+          type: u1
+        - label: 可充电储能子系统电压信息列表
+          type: group
+          count: "$可充电储能子系统个数"
+          fields:
+            - label: 可充电储能子系统号
+              type: u1
+            - label: 可充电储能装置电压
+              type: u2
+              scale: 0.1
+              unit: V
+            - label: 可充电储能装置电流
+              type: u2
+              offset: 1000
+              scale: 0.1
+              unit: A
+            - label: 单体电池总数
+              type: u2
+            - label: 本帧起始电池序号
+              type: u2
+            - label: 本帧单体电池总数
+              type: u1
+            - label: 单体电池电压列表
+              type: group
+              count: "$本帧单体电池总数"
+              fields:
+                - label: 单体电池电压
+                  type: u2
+                  scale: 0.001
+                  unit: V
+
+    "0x09":
+      name: 可充电储能装置温度数据
+      body:
+        - label: 可充电储能子系统个数
+          type: u1
+        - label: 可充电储能子系统温度信息列表
+          type: group
+          count: "$可充电储能子系统个数"
+          fields:
+            - label: 可充电储能子系统号
+              type: u1
+            - label: 可充电储能温度探针个数
+              type: u2
+            - label: 可充电储能子系统温度值列表
+              type: group
+              count: "$可充电储能温度探针个数"
+              fields:
+                - label: 温度值
+                  type: u1
+                  offset: 40
+                  unit: ℃
+
+    "0x80":
+      name: 扩展部分数据
+      body:
+        - label: 自定义数据长度
+          type: u2
+        - label: 终端厂家
+          type: u2
+        - label: 车辆类型
+          type: u2
+        - label: 协议类型
+          type: u2
+        - label: 加密部分
+          type: u2
+        - label: 终端状态
+          type: u1
+          bits:
+            "0": 无CAN数据
+        - label: 保留
+          type: raw
+          length: 1
+        - label: 方向
+          type: u2
+        - label: Can帧个数
+          type: u1
+        - label: CAN帧列表
+          type: group
+          count: "$Can帧个数"
+          fields:
+            - label: canID
+              type: raw
+              length: 4
+            - label: Can帧数据长度
+              type: u1
+            - label: Can帧数据
+              type: raw
+              length: "$Can帧数据长度"
+
+    # 0x0A~0x2F 平台交换自定义数据、0x81~0xFE 其他自定义部分：协议文档未给出结构，
+    # 遇到时解析器无法确定长度，会记录 UNKNOWN_SUBTYPE 并把剩余字节原样保留。
+
+"0x03":
+  name: 补发信息上报
+  body:
+    - label: 数据采集时间
+      type: dec-time
+  subtypeRef: "0x02"
+
+"0x04":
+  name: 平台登录
+  body:
+    - label: 登录时间
+      type: dec-time
+    - label: 登录序号
+      type: u2
+    # TODO 待标准核对
+    - label: 账号/密码(待核对)
+      type: raw
+      length: rest
+
+"0x05":
+  name: 平台登出
+  body:
+    - label: 登出时间
+      type: dec-time
+    # TODO 待标准核对
+    - label: 待核对部分
+      type: raw
+      length: rest
+
+"0x06":
+  name: 心跳
+
+"0x07":
+  name: 终端校时
+  body:
+    - label: 校时时间
+      type: dec-time
+
+"0x81":
+  name: 车辆登出
+  body:
+    - label: 登出时间
+      type: dec-time
+    # TODO 待标准核对
+    - label: 待核对部分
+      type: raw
+      length: rest

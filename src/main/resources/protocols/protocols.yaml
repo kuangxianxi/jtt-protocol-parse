@@ -1,0 +1,10 @@
+# 协议清单：协议 → 版本 → 厂商。
+# 文件路径：protocols/<协议>/<版本>/<厂商>.yaml
+# 解析时 protocol/version/vendor 必须在这里登记且文件存在，否则直接失败（不做默认回退）。
+protocols:
+  gc-32960:
+    label: GB/T 32960.3 新能源汽车国标
+    versions:
+      "2016":
+        vendors:
+          - breton

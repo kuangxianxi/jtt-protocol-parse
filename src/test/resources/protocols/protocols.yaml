@@ -1,0 +1,10 @@
+# 测试清单：覆盖主 resources 的 protocols.yaml，额外登记 test-vendor。
+# breton 配置仍从主 resources 读取（classpath 按完整路径查找）。
+protocols:
+  gc-32960:
+    label: GB/T 32960.3 新能源汽车国标
+    versions:
+      "2016":
+        vendors:
+          - breton
+          - test-vendor

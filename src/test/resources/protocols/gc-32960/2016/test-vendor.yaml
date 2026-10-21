@@ -1,0 +1,8 @@
+# 测试专用厂商配置：完整独立文件（不是 overlay）
+protocol: gc-32960
+version: "2016"
+label: 测试厂商协议
+vendor: test-vendor
+
+"0x06":
+  name: 心跳(厂商版)
