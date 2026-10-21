@@ -67,13 +67,13 @@ public final class ParseEngine {
         FrameAdapter adapter = adapters.get(protocol);
         if (adapter == null) {
             r.getIssues().add(Issue.of("protocol", IssueCode.UNSUPPORTED_PROTOCOL, "暂不支持的协议: " + protocol));
-            packUnknown(r, "不支持的协议，报文整体原样保留", msg);
+            packUnknown(r.getNodes(), "不支持的协议，整条报文原样保留", msg);
             return r;
         }
         // 拆帧在协议描述之前：即使协议 YAML 未登记，报文头与数据单元边界也是帧层已知的
         Frame frame = adapter.parse(msg, r.getIssues());
         if (frame == null) {
-            packUnknown(r, "未识别为 " + adapter.protocolId() + " 报文，报文整体原样保留", msg);
+            packUnknown(r.getNodes(), "未识别为 " + adapter.protocolId() + " 报文，整条报文原样保留", msg);
             return r;
         }
         r.getNodes().addAll(frame.header());
@@ -82,7 +82,7 @@ public final class ParseEngine {
         if (d == null) {
             r.getIssues().add(Issue.of("protocol", IssueCode.UNSUPPORTED_PROTOCOL,
                     "协议描述缺失: " + protocol + " / " + version + (r.getVendor() == null ? "" : " / " + r.getVendor())));
-            packUnknown(r, "协议描述未登记，数据单元原样保留", frame.payload());
+            packUnknown(r.getNodes(), "协议描述未登记，数据单元原样保留", frame.payload());
             return addTrailer(r, frame);
         }
         r.setVersion(d.getVersion());
@@ -91,7 +91,7 @@ public final class ParseEngine {
         if (cmd == null) {
             r.getIssues().add(Issue.of("command", IssueCode.UNKNOWN_COMMAND,
                     String.format("未知命令字 0x%02X，数据单元 %d 字节原样保留", frame.command(), frame.payload().length)));
-            packUnknown(r, String.format("未知命令字 0x%02X", frame.command()), frame.payload());
+            packUnknown(r.getNodes(), String.format("未知命令字 0x%02X", frame.command()), frame.payload());
             return addTrailer(r, frame);
         }
         r.setReport(d.prefix() + " · " + cmd.getName());
@@ -115,10 +115,10 @@ public final class ParseEngine {
         return r;
     }
 
-    /** 未匹配统一收口：解析到此为止，剩余部分打包为「未知报文」节点展示报文原文 */
-    private void packUnknown(ParseResult r, String why, byte[] rest) {
+    /** 未匹配统一收口：已知字节 → 「未知报文」节点（展示报文原文），后续不再解析 */
+    private void packUnknown(List<Node> sink, String why, byte[] rest) {
         String hex = HexUtil.encode(rest);
-        r.getNodes().add(new Node("未知报文").setValue(hex).setRaw(hex).setNote(why));
+        sink.add(new Node("未知报文").setValue(hex).setRaw(hex).setNote(why));
     }
 
     /** 报文头命令节点补上中文名（节点 label 由帧层创建，故用帧层提供的常量定位） */
@@ -130,14 +130,14 @@ public final class ParseEngine {
         }
     }
 
-    /** 未配置数据体：空数据单元正常；有字节则记录问题并原样保留 */
+    /** 未配置数据体：空数据单元正常；有字节则记录问题并打包为未知报文 */
     private void noBody(CommandSpec cmd, byte[] payload, ParseResult r) {
         if (payload.length == 0) {
             return;
         }
         r.getIssues().add(Issue.of("body", IssueCode.BODY_UNEXPECTED,
                 cmd.getName() + " 未配置数据体，实际 " + payload.length + " 字节，原样保留"));
-        r.getNodes().add(new Node("多余数据体").setValue(HexUtil.encode(payload)));
+        packUnknown(r.getNodes(), cmd.getName() + " 未配置数据体，实际有字节", payload);
     }
 
     // ------------------------------------------------- stream 型数据体（0x02/0x03）
@@ -156,7 +156,7 @@ public final class ParseEngine {
                 r.getNodes().addAll(prefix.getChildren());
             }
             if (r.getIssues().size() > before) {
-                dumpRest(cur, r.getNodes());
+                packUnknownRest(r.getNodes(), "前置字段解析异常，停止后续解析", cur);
                 return;
             }
         }
@@ -167,20 +167,17 @@ public final class ParseEngine {
             cur.setPos(cur.getPos() + 1);
 
             SubTypeSpec st = cmd.getSubtype() == null ? null : cmd.getSubtype().get(type);
-            Node node = new Node(st == null ? String.format("未知子报文 0x%02X", type) : st.getName());
 
             if (st == null || st.getBody() == null) {
-                String why = st == null ? "未知子报文类型" : "该子报文的字段待核对(M2)";
-                String rest = HexUtil.slice(payload, cur.getPos(), cur.remaining());
+                String why = st == null ? "未知子报文类型" : "该子报文未配置字段定义";
                 r.getIssues().add(Issue.of("body", IssueCode.UNKNOWN_SUBTYPE, String.format(
                         "子报文 0x%02X %s，无法确定长度，剩余 %d 字节原样保留", type, why, cur.remaining())));
-                node.setValue(rest).setRaw(HexUtil.slice(payload, cur.getPos(), cur.remaining()))
-                        .setNote(why + "，剩余字节原样保留");
-                r.getNodes().add(node);
+                packUnknownRest(r.getNodes(), String.format("子报文 0x%02X 未知，无法确定长度", type), cur);
                 return;
             }
 
             int before = r.getIssues().size();
+            Node node = new Node(st.getName());
             FieldCodec.parseFields(st.getBody(), cur, node, r.getIssues(), "body");
             int consumed = cur.getPos() - start;
             node.setRaw(HexUtil.slice(payload, start, consumed));
@@ -188,11 +185,11 @@ public final class ParseEngine {
             if (consumed <= 1) {
                 r.getIssues().add(Issue.of("body", IssueCode.UNKNOWN_SUBTYPE, String.format(
                         "子报文 0x%02X 未消费任何字节，剩余 %d 字节原样保留", type, cur.remaining())));
-                dumpRest(cur, r.getNodes());
+                packUnknownRest(r.getNodes(), String.format("子报文 0x%02X 未消费任何字节", type), cur);
                 return;
             }
             if (r.getIssues().size() > before) {
-                dumpRest(cur, r.getNodes());
+                packUnknownRest(r.getNodes(), "子报文内字段解析异常，停止后续解析", cur);
                 return;
             }
         }
@@ -205,25 +202,21 @@ public final class ParseEngine {
         Node section = new Node(label);
         Cursor cur = new Cursor(payload, 0);
         FieldCodec.parseFields(fields, cur, section, issues, pathPrefix);
+        sink.add(section);
+        // 解析到末尾仍有剩余：统一视为未知报文（后续不再可能有已知字段）
         if (cur.remaining() > 0) {
             issues.add(Issue.of("body", IssueCode.BODY_LEFTOVER,
                     "解析后剩余 " + cur.remaining() + " 字节（字段可能与标准不符或含扩展）"));
-            section.add(restNode(cur));
+            packUnknownRest(sink, "数据体字段解析不完整，剩余未匹配", cur);
         }
-        sink.add(section);
     }
 
-    private Node restNode(Cursor cur) {
-        return new Node("剩余部分(待核对)")
-                .setValue(HexUtil.slice(cur.getBuf(), cur.getPos(), cur.remaining()))
-                .setNote("TODO 待标准核对");
-    }
-
-    private void dumpRest(Cursor cur, List<Node> sink) {
-        if (cur.remaining() > 0) {
-            sink.add(new Node("剩余部分")
-                    .setValue(HexUtil.slice(cur.getBuf(), cur.getPos(), cur.remaining()))
-                    .setRaw(HexUtil.slice(cur.getBuf(), cur.getPos(), cur.remaining())));
+    /** 游标处剩余字节 → 「未知报文」节点（展示报文原文） */
+    private void packUnknownRest(List<Node> sink, String why, Cursor cur) {
+        if (cur.remaining() <= 0) {
+            return;
         }
+        String hex = HexUtil.slice(cur.getBuf(), cur.getPos(), cur.remaining());
+        sink.add(new Node("未知报文").setValue(hex).setRaw(hex).setNote(why));
     }
 }

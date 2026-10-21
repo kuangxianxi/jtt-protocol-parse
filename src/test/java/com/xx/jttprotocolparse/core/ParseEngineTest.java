@@ -51,8 +51,8 @@ class ParseEngineTest {
         ParseResult r = one(LOGIN);
         assertTrue(r.isOk(), issues(r));
         assertEquals("GB/T 32960.3 新能源汽车国标 · breton · 车辆登录", r.getReport());
-        assertEquals("2026-10-20 17:35:00", value(children(r), "登录时间"));
-        assertEquals("1", value(children(r), "登录序号"));
+        assertEquals("2026-10-20 17:35:00", value(children(r, "车辆登录"), "登录时间"));
+        assertEquals("1", value(children(r, "车辆登录"), "登录流水号"));
         // 单流输出尾部 = 校验码
         assertEquals("校验码(BCC)", r.getNodes().get(r.getNodes().size() - 1).getLabel());
     }
@@ -174,12 +174,23 @@ class ParseEngineTest {
     }
 
     @Test
+    void vehicleLogout() {
+        // 0x04 车辆登出：登出时间(dec-time) + 登出流水号(u2)
+        ParseResult r = one(frame(0x04, 0xFE, "1A0A14112300" + "0001"));
+        assertTrue(r.isOk(), issues(r));
+        assertEquals("GB/T 32960.3 新能源汽车国标 · breton · 车辆登出", r.getReport());
+        assertEquals("2026-10-20 17:35:00", value(children(r, "车辆登出"), "登出时间"));
+        assertEquals("1", value(children(r, "车辆登出"), "登出流水号"));
+        assertEquals("校验码(BCC)", r.getNodes().get(r.getNodes().size() - 1).getLabel());
+    }
+
+    @Test
     void badChecksum_尽力解析() {
         String bad = LOGIN.substring(0, LOGIN.length() - 2) + "90";
         ParseResult r = one(bad);
         assertTrue(r.getIssues().stream().anyMatch(i -> IssueCodeOf(i).equals("CHECKSUM_MISMATCH")), issues(r));
         // 明文字段仍应解析出来（尽力解析），校验码节点尾部标注校验不符
-        assertEquals("2026-10-20 17:35:00", value(children(r), "登录时间"));
+        assertEquals("2026-10-20 17:35:00", value(children(r, "车辆登录"), "登录时间"));
         Node bcc = r.getNodes().get(r.getNodes().size() - 1);
         assertEquals("校验码(BCC)", bcc.getLabel());
         assertEquals("校验不符", bcc.getCheck());
@@ -256,9 +267,11 @@ class ParseEngineTest {
         // 0x0A 未在 subtype 表中定义，无法确定长度：记录 issue，剩余字节原样保留
         ParseResult r = one(frame(0x02, 0xFE, "1A0A14112300" + "0A" + "AABBCC"));
         assertTrue(r.getIssues().stream().anyMatch(i -> IssueCodeOf(i).equals("UNKNOWN_SUBTYPE")), issues(r));
-        Node packet = node(r.getNodes(), "未知子报文 0x0A");
-        assertNotNull(packet, "未知子报文节点缺失");
+        // 统一收口：未知子报文连同其后续全部打包为「未知报文」
+        Node packet = node(r.getNodes(), "未知报文");
+        assertNotNull(packet, "未知报文节点缺失");
         assertEquals("AABBCC", packet.getValue());
+        assertTrue(packet.getNote().contains("0x0A"), "note 应带子报文类型");
     }
 
     // ---- 样例帧构造（测试专用）：保证 BCC 正确 ----
@@ -309,8 +322,11 @@ class ParseEngineTest {
         return engine.parse("gc-32960", "2016", "breton", h).get(0);
     }
 
-    private static List<Node> children(ParseResult r) {
-        return node(r.getNodes(), "车辆登录").getChildren();
+    /** 定位报文类型小节节点并取其字段 */
+    private static List<Node> children(ParseResult r, String section) {
+        Node n = node(r.getNodes(), section);
+        assertNotNull(n, section + " 节点缺失");
+        return n.getChildren();
     }
 
     private static String value(List<Node> list, String label) {
