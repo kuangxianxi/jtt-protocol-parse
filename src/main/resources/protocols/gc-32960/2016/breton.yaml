@@ -19,8 +19,22 @@ label: GB/T 32960.3 新能源汽车国标
   body:
     - label: 登录时间
       type: dec-time
-    - label: 登录序号
+    - label: 登录流水号
       type: u2
+    - label: ICCID
+      type: ascii
+      length: 20
+    - label: 可充电储能子系统数
+      type: u1
+    - label: 可充电储能系统编码长度
+      type: u1
+    - label: 可充电储能系统编码列表
+      type: group
+      count: "$可充电储能子系统数"
+      fields:
+        - label: 可充电储能系统编码
+          type: ascii
+          length: "$可充电储能系统编码长度"
 
 "0x02":
   name: 实时信息上报
@@ -697,3 +711,10 @@ label: GB/T 32960.3 新能源汽车国标
       type: dec-time
   subtypeRef: "0x02"
 
+"0x04":
+  name: 车辆登出
+  body:
+    - label: 登出时间
+      type: dec-time
+    - label: 登出流水号
+      type: u2
