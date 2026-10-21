@@ -148,6 +148,21 @@ class FieldCodecTest {
     }
 
     @Test
+    void scale不产生浮点尾差() {
+        // 实测暴露的样例：0x0CD4 (3284) × 0.001，double 乘法曾输出 3.2840000000000003
+        FieldSpec f = new FieldSpec()
+                .setLabel("单体电池电压")
+                .setType("u2")
+                .setScale(0.001);
+        Cursor cur = new Cursor(new byte[]{0x0C, (byte) 0xD4}, 0);
+        List<com.xx.jttprotocolparse.core.result.Issue> issues = new ArrayList<>();
+        Node n = FieldCodec.parseOne(f, cur, null, issues, "单体电池电压");
+
+        assertTrue(issues.isEmpty(), issues.toString());
+        assertEquals("3.284", n.getValue());
+    }
+
+    @Test
     void decTime_不足6字节记问题() {
         Cursor cur = new Cursor(new byte[]{0x1A, 0x0A, 0x14, 0x11, 0x23}, 0);
         List<com.xx.jttprotocolparse.core.result.Issue> issues = new ArrayList<>();

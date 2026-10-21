@@ -134,8 +134,12 @@ public final class FieldCodec {
             n.setValue(hit != null ? hit : String.format("0x%02X", u));
             return;
         }
-        // 数值：offset 后乘 scale
-        n.setValue(plain((signed - f.getOffset()) * f.getScale()));
+        // 数值：offset 后乘 scale；用 BigDecimal 做精确十进制运算，杜绝 double 二进制尾差（如 3284×0.001 → 3.2840000000000003）
+        n.setValue(BigDecimal.valueOf(signed)
+                .subtract(BigDecimal.valueOf(f.getOffset()))
+                .multiply(BigDecimal.valueOf(f.getScale()))
+                .stripTrailingZeros()
+                .toPlainString());
     }
 
     private static void decodeBcdTime(byte[] raw, Node n) {
@@ -255,10 +259,6 @@ public final class FieldCodec {
         if (!inline.isEmpty()) {
             n.setValue(String.join("；", inline));
         }
-    }
-
-    private static String plain(double d) {
-        return BigDecimal.valueOf(d).stripTrailingZeros().toPlainString();
     }
 
     private static String append(String a, String b) {
