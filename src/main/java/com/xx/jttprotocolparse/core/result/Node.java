@@ -14,7 +14,6 @@ import java.util.List;
 @Accessors(chain = true)
 public class Node {
 
-    private String id;
     private String label;
     private String value;
     private String unit;
@@ -31,8 +30,7 @@ public class Node {
     public Node() {
     }
 
-    public Node(String id, String label) {
-        this.id = id;
+    public Node(String label) {
         this.label = label;
     }
 

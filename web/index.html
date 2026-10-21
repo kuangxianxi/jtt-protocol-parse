@@ -64,11 +64,11 @@
     </div>
 
     <h3 class="sec">报文头</h3>
-    <div v-for="n in r.header" :key="n.id"><field-node :node="n"></field-node></div>
+    <div v-for="(n, i) in r.header" :key="i"><field-node :node="n"></field-node></div>
 
     <h3 class="sec">数据体</h3>
     <div v-if="!r.body || !r.body.length" class="note">（无数据体）</div>
-    <div v-for="n in r.body" :key="n.id"><field-node :node="n"></field-node></div>
+    <div v-for="(n, i) in r.body" :key="i"><field-node :node="n"></field-node></div>
   </div>
 </div>
 

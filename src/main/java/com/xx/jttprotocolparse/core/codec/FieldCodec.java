@@ -89,7 +89,7 @@ public final class FieldCodec {
 
     /** 单字段解码（raw 字节已按长度切出） */
     private static Node decode(FieldSpec f, byte[] raw, Cursor cur, List<Issue> issues, String path) {
-        Node n = new Node(key(f), f.getLabel());
+        Node n = new Node(f.getLabel());
         switch (f.getType()) {
             case "u1", "u2", "u3", "u4", "s1", "s2" -> decodeNumber(f, raw, n, issues, path);
             case "bcd-time" -> decodeBcdTime(raw, n);
@@ -177,7 +177,7 @@ public final class FieldCodec {
             return;
         }
         for (int i = 0; i < c; i++) {
-            Node item = new Node(key(f), f.getLabel() + " " + (i + 1));
+            Node item = new Node(f.getLabel() + " " + (i + 1));
             parent.add(item);
             parseFields(f.getFields(), cur, item, issues, path + "[" + i + "]");
         }

@@ -5,6 +5,7 @@ import com.xx.jttprotocolparse.core.codec.FieldCodec;
 import com.xx.jttprotocolparse.core.descr.DescriptorRegistry;
 import com.xx.jttprotocolparse.core.frame.Frame;
 import com.xx.jttprotocolparse.core.frame.FrameAdapter;
+import com.xx.jttprotocolparse.core.frame.GB32960FrameAdapter;
 import com.xx.jttprotocolparse.core.hex.HexUtil;
 import com.xx.jttprotocolparse.core.model.CommandSpec;
 import com.xx.jttprotocolparse.core.model.FieldSpec;
@@ -86,7 +87,7 @@ public final class ParseEngine {
         if (cmd == null) {
             r.getIssues().add(Issue.of("command", IssueCode.UNKNOWN_COMMAND,
                     String.format("未知命令字 0x%02X，数据单元 %d 字节原样保留", frame.command(), frame.payload().length)));
-            Node raw = new Node("raw", "数据单元(未知命令)").setValue(HexUtil.encode(frame.payload()));
+            Node raw = new Node("数据单元(未知命令)").setValue(HexUtil.encode(frame.payload()));
             r.getBody().add(raw);
             return r;
         }
@@ -105,10 +106,10 @@ public final class ParseEngine {
         return r;
     }
 
-    /** 报文头命令节点补上中文名 */
+    /** 报文头命令节点补上中文名（节点 label 由帧层创建，故用帧层提供的常量定位） */
     private void decorateCommandNode(Frame frame, CommandSpec cmd) {
         for (Node n : frame.header()) {
-            if ("command".equals(n.getId())) {
+            if (GB32960FrameAdapter.COMMAND_LABEL.equals(n.getLabel())) {
                 n.setValue(String.format("0x%02X %s", frame.command(), cmd.getName()));
             }
         }
@@ -121,7 +122,7 @@ public final class ParseEngine {
         }
         r.getIssues().add(Issue.of("body", IssueCode.BODY_UNEXPECTED,
                 cmd.getName() + " 未配置数据体，实际 " + payload.length + " 字节，原样保留"));
-        r.getBody().add(new Node("raw", "多余数据体").setValue(HexUtil.encode(payload)));
+        r.getBody().add(new Node("多余数据体").setValue(HexUtil.encode(payload)));
     }
 
     // ------------------------------------------------- stream 型数据体（0x02/0x03）
@@ -134,7 +135,7 @@ public final class ParseEngine {
         Cursor cur = new Cursor(payload, 0);
         if (cmd.getBody() != null) {
             int before = r.getIssues().size();
-            Node prefix = new Node("prefix", null);
+            Node prefix = new Node();
             FieldCodec.parseFields(cmd.getBody(), cur, prefix, r.getIssues(), "body");
             if (prefix.getChildren() != null) {
                 r.getBody().addAll(prefix.getChildren());
@@ -145,15 +146,13 @@ public final class ParseEngine {
             }
         }
 
-        int seq = 0;
         while (cur.remaining() > 0) {
             int start = cur.getPos();
             int type = cur.getBuf()[cur.getPos()] & 0xFF;
             cur.setPos(cur.getPos() + 1);
 
             SubTypeSpec st = cmd.getSubtype() == null ? null : cmd.getSubtype().get(type);
-            Node node = new Node("packet_" + String.format("%02X", type) + "_" + ++seq,
-                    st == null ? String.format("未知子报文 0x%02X", type) : st.getName());
+            Node node = new Node(st == null ? String.format("未知子报文 0x%02X", type) : st.getName());
 
             if (st == null || st.getBody() == null) {
                 String why = st == null ? "未知子报文类型" : "该子报文的字段待核对(M2)";
@@ -188,7 +187,7 @@ public final class ParseEngine {
 
     private void parseBody(byte[] payload, List<FieldSpec> fields, String label, List<Node> sink,
                            List<Issue> issues, String pathPrefix) {
-        Node section = new Node("body", label);
+        Node section = new Node(label);
         Cursor cur = new Cursor(payload, 0);
         FieldCodec.parseFields(fields, cur, section, issues, pathPrefix);
         if (cur.remaining() > 0) {
@@ -200,14 +199,14 @@ public final class ParseEngine {
     }
 
     private Node restNode(Cursor cur) {
-        return new Node("rest", "剩余部分(待核对)")
+        return new Node("剩余部分(待核对)")
                 .setValue(HexUtil.slice(cur.getBuf(), cur.getPos(), cur.remaining()))
                 .setNote("TODO 待标准核对");
     }
 
     private void dumpRest(Cursor cur, List<Node> sink) {
         if (cur.remaining() > 0) {
-            sink.add(new Node("rest", "剩余部分")
+            sink.add(new Node("剩余部分")
                     .setValue(HexUtil.slice(cur.getBuf(), cur.getPos(), cur.remaining()))
                     .setRaw(HexUtil.slice(cur.getBuf(), cur.getPos(), cur.remaining())));
         }

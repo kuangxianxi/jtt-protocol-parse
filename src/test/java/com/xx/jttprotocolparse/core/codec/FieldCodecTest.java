@@ -39,7 +39,6 @@ class FieldCodecTest {
         Cursor cur = new Cursor(new byte[]{0x03}, 0);
         Node n = parse(cur, "u1");
 
-        assertEquals("时间", n.getId());
         assertEquals("时间", n.getLabel());
         assertEquals(3L, cur.getVars().get("时间"));
     }

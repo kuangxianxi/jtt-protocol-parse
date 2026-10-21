@@ -24,6 +24,8 @@ public final class GB32960FrameAdapter implements FrameAdapter {
 
     /** 起始符之后、数据单元之前的固定区长度：命令1 + 应答1 + VIN17 + 加密1 + 长度2 = 22 */
     private static final int HEADER_LEN = 22;
+    /** 报文头命令单元节点的 label；引擎补中文名时用此常量定位 */
+    public static final String COMMAND_LABEL = "命令单元";
     private static final int START_1 = 0x23;
     private static final int START_2 = 0x23;
 
@@ -105,28 +107,28 @@ public final class GB32960FrameAdapter implements FrameAdapter {
 
     private static List<Node> headerNodes(byte[] m, int command, int ack, String vin, int enc, int declaredLen, boolean checksumOk) {
         List<Node> out = new ArrayList<>();
-        out.add(new Node("startFlag", "起始符")
+        out.add(new Node("起始符")
                 .setValue("##")
                 .setRaw(HexUtil.slice(m, 0, 2)));
-        out.add(new Node("command", "命令单元")
+        out.add(new Node(COMMAND_LABEL)
                 .setValue(String.format("0x%02X", command))
                 .setRaw(HexUtil.slice(m, 2, 1)));
-        out.add(new Node("ack", "应答标志")
+        out.add(new Node("应答标志")
                 .setValue(ACK.getOrDefault(ack, String.format("未知应答(0x%02X)", ack)))
                 .setRaw(HexUtil.slice(m, 3, 1)));
-        out.add(new Node("vin", "VIN")
+        out.add(new Node("VIN")
                 .setValue(vin.isEmpty() ? HexUtil.slice(m, 4, 17) : vin)
                 .setRaw(HexUtil.slice(m, 4, 17))
                 .setNote(vin.isEmpty() ? "非可读 ASCII" : null));
-        out.add(new Node("encType", "数据单元加密方式")
+        out.add(new Node("数据单元加密方式")
                 .setValue(ENC.getOrDefault(enc, String.format("未知加密(0x%02X)", enc)))
                 .setRaw(HexUtil.slice(m, 21, 1))
                 .setNote(enc != 0x01 && ENC.containsKey(enc) ? "已加密，明文解析不可用" : null));
-        out.add(new Node("payloadLen", "数据单元长度")
+        out.add(new Node("数据单元长度")
                 .setValue(String.valueOf(declaredLen))
                 .setRaw(HexUtil.slice(m, 22, 2))
                 .setCheck(checksumOk ? "与实际一致" : "与实际不符"));
-        out.add(new Node("checksum", "校验码(BCC)")
+        out.add(new Node("校验码(BCC)")
                 .setValue(String.format("0x%02X", m[m.length - 1] & 0xFF))
                 .setRaw(HexUtil.slice(m, m.length - 1, 1))
                 .setCheck(checksumOk ? "校验通过" : "校验不符"));
