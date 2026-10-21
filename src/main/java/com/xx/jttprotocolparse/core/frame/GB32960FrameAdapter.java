@@ -26,6 +26,8 @@ public final class GB32960FrameAdapter implements FrameAdapter {
     private static final int HEADER_LEN = 22;
     /** 报文头命令单元节点的 label；引擎补中文名时用此常量定位 */
     public static final String COMMAND_LABEL = "命令单元";
+    /** 协议 id（与 protocols.yaml 登记一致） */
+    public static final String PROTOCOL_ID = "gc-32960";
     private static final int START_1 = 0x23;
     private static final int START_2 = 0x23;
 
@@ -41,7 +43,7 @@ public final class GB32960FrameAdapter implements FrameAdapter {
 
     @Override
     public String protocolId() {
-        return "gc-32960";
+        return PROTOCOL_ID;
     }
 
     @Override
