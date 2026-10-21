@@ -4,6 +4,7 @@ import com.xx.jttprotocolparse.core.descr.DescriptorRegistry;
 import com.xx.jttprotocolparse.core.model.CommandSpec;
 import com.xx.jttprotocolparse.core.model.FieldSpec;
 import com.xx.jttprotocolparse.core.model.ProtocolSpec;
+import com.xx.jttprotocolparse.core.model.SegmentSpec;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -82,6 +83,36 @@ class DescriptorRegistryTest {
                 .setFields(List.of(inner));
 
         assertThrows(IllegalStateException.class, () -> DescriptorRegistry.checkFields(List.of(group), "子报文 电机"));
+    }
+
+    @Test
+    void bits与segments同字段声明加载失败() {
+        FieldSpec f = new FieldSpec()
+                .setLabel("终端状态")
+                .setType("u1")
+                .setBits(Map.of("0", "无CAN数据"))
+                .setSegments(List.of(new SegmentSpec().setStart(0).setValues(Map.of("1", "无CAN数据"))));
+
+        IllegalStateException e = assertThrows(IllegalStateException.class,
+                () -> DescriptorRegistry.checkFields(List.of(f), "命令 扩展"));
+        assertTrue(e.getMessage().contains("不可同时声明 bits 与 segments"));
+    }
+
+    @Test
+    void segments越界或非数值类型加载失败() {
+        FieldSpec overflow = new FieldSpec()
+                .setLabel("终端状态")
+                .setType("u1")
+                .setSegments(List.of(new SegmentSpec().setStart(7).setWidth(2).setValues(Map.of("0", "x"))));
+        IllegalStateException e = assertThrows(IllegalStateException.class,
+                () -> DescriptorRegistry.checkFields(List.of(overflow), "命令 扩展"));
+        assertTrue(e.getMessage().contains("位段越界"));
+
+        FieldSpec nonNumeric = new FieldSpec()
+                .setLabel("报警时间")
+                .setType("bcd-time")
+                .setSegments(List.of(new SegmentSpec().setStart(0).setValues(Map.of("1", "x"))));
+        assertThrows(IllegalStateException.class, () -> DescriptorRegistry.checkFields(List.of(nonNumeric), "命令 报警"));
     }
 
     @Test

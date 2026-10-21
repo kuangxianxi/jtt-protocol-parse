@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.xx.jttprotocolparse.core.model.FieldSpec;
+import com.xx.jttprotocolparse.core.model.SegmentSpec;
 import com.xx.jttprotocolparse.core.model.SubTypeSpec;
 
 /**
@@ -187,7 +188,7 @@ public final class DescriptorRegistry {
         }
     }
 
-    /** map 与 invalid 互斥；group 嵌套递归。包级可见，供测试直接驱动 */
+    /** map 与 invalid 互斥、bits 与 segments 互斥；位段越界失败；group 嵌套递归。包级可见，供测试直接驱动 */
     static void checkFields(List<FieldSpec> fields, String owner) {
         if (fields == null) {
             return;
@@ -196,7 +197,34 @@ public final class DescriptorRegistry {
             if (f.getMap() != null && f.getInvalid() != null) {
                 throw new IllegalStateException(owner + " 字段「" + f.getLabel() + "」不可同时声明 map 与 invalid");
             }
+            if (f.getBits() != null && f.getSegments() != null) {
+                throw new IllegalStateException(owner + " 字段「" + f.getLabel() + "」不可同时声明 bits 与 segments");
+            }
+            checkSegments(f, owner);
             checkFields(f.getFields(), owner);
+        }
+    }
+
+    /** segments 仅限 u/s 数值类型，且每段不越出字段位宽 */
+    private static void checkSegments(FieldSpec f, String owner) {
+        if (f.getSegments() == null) {
+            return;
+        }
+        Integer limit = switch (f.getType() == null ? "" : f.getType()) {
+            case "u1", "s1" -> 8;
+            case "u2", "s2" -> 16;
+            case "u3" -> 24;
+            case "u4" -> 32;
+            default -> null;
+        };
+        if (limit == null) {
+            throw new IllegalStateException(owner + " 字段「" + f.getLabel() + "」segments 仅支持 u1/u2/u3/u4/s1/s2 数值类型");
+        }
+        for (SegmentSpec s : f.getSegments()) {
+            if (s.getWidth() < 1 || s.getStart() + s.getWidth() > limit) {
+                throw new IllegalStateException(owner + " 字段「" + f.getLabel() + "」位段越界：start "
+                        + s.getStart() + " + width " + s.getWidth() + " 超出 " + f.getType() + " 的 " + limit + " 位");
+            }
         }
     }
 

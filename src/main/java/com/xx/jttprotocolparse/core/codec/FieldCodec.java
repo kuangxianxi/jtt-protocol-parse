@@ -3,6 +3,7 @@ package com.xx.jttprotocolparse.core.codec;
 import com.xx.jttprotocolparse.core.hex.HexUtil;
 import com.xx.jttprotocolparse.core.model.Expr;
 import com.xx.jttprotocolparse.core.model.FieldSpec;
+import com.xx.jttprotocolparse.core.model.SegmentSpec;
 import com.xx.jttprotocolparse.core.result.Issue;
 import com.xx.jttprotocolparse.core.result.IssueCode;
 import com.xx.jttprotocolparse.core.result.Node;
@@ -18,7 +19,7 @@ import java.util.TreeMap;
 /**
  * 字段解码器库。类型清单收敛于设计方案 §5.3：
  * u1/u2/u3/u4（无符号）、bcd-time、dec-time、ascii/gbk、raw、group(循环块) +
- * scale/offset/unit/map/bits/invalid/length("$label"/"rest")。
+ * scale/offset/unit/map/bits/segments/invalid/length("$label"/"rest")。
  * 字段没有 id：节点标识、issue path、$ 变量引用统一使用 label。
  * 解码不了的问题一律进 issues 并定位 path，不中断整体解析。
  */
@@ -120,6 +121,11 @@ public final class FieldCodec {
         // 位表
         if (f.getBits() != null && !f.getBits().isEmpty()) {
             n.setValue(bitsLabel(f.getBits(), u, raw.length));
+            return;
+        }
+        // 位段：每段合成值查表，未命中显示该段十进制；未定义段（保留位）不输出
+        if (f.getSegments() != null && !f.getSegments().isEmpty()) {
+            n.setValue(segmentsLabel(f.getSegments(), u));
             return;
         }
         // 枚举映射（按原值）；未命中直接显示原值
@@ -231,6 +237,17 @@ public final class FieldCodec {
             }
         }
         return on.isEmpty() ? "无置位" : String.join("、", on);
+    }
+
+    /** 位段映射：每段取位域合成值查「值 → 中文」，未命中显示该段十进制原值 */
+    private static String segmentsLabel(List<SegmentSpec> segments, long u) {
+        List<String> out = new ArrayList<>();
+        for (SegmentSpec s : segments) {
+            int value = (int) ((u >> s.getStart()) & ((1L << s.getWidth()) - 1));
+            String hit = s.getValues() == null ? null : s.getValues().get(String.valueOf(value));
+            out.add(hit != null ? hit : String.valueOf(value));
+        }
+        return String.join("；", out);
     }
 
     private static String plain(double d) {

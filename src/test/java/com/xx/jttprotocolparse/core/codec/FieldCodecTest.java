@@ -1,6 +1,7 @@
 package com.xx.jttprotocolparse.core.codec;
 
 import com.xx.jttprotocolparse.core.model.FieldSpec;
+import com.xx.jttprotocolparse.core.model.SegmentSpec;
 import com.xx.jttprotocolparse.core.result.IssueCode;
 import com.xx.jttprotocolparse.core.result.Node;
 import org.junit.jupiter.api.Test;
@@ -88,6 +89,39 @@ class FieldCodecTest {
 
         assertTrue(issues.isEmpty(), issues.toString());
         assertEquals("3", n.getValue());
+    }
+
+    @Test
+    void segments按位段合成值映射并拼接() {
+        FieldSpec f = new FieldSpec()
+                .setLabel("终端状态")
+                .setType("u1")
+                .setSegments(List.of(
+                        new SegmentSpec().setStart(0).setWidth(1)
+                                .setValues(Map.of("0", "有CAN数据", "1", "无CAN数据")),
+                        new SegmentSpec().setStart(1).setWidth(2)
+                                .setValues(Map.of("0", "无TF卡", "1", "有TF卡，初始化", "2", "有TF卡，异常", "3", "有TF卡，正常"))));
+        Cursor cur = new Cursor(new byte[]{0x06}, 0);   // bit0=0 有CAN；bit1~2=11 有TF卡正常
+        List<com.xx.jttprotocolparse.core.result.Issue> issues = new ArrayList<>();
+        Node n = FieldCodec.parseOne(f, cur, null, issues, "终端状态");
+
+        assertTrue(issues.isEmpty(), issues.toString());
+        assertEquals("有CAN数据；有TF卡，正常", n.getValue());
+    }
+
+    @Test
+    void segments未命中显示该段十进制() {
+        FieldSpec f = new FieldSpec()
+                .setLabel("终端状态")
+                .setType("u1")
+                .setSegments(List.of(new SegmentSpec().setStart(1).setWidth(2)
+                        .setValues(Map.of("0", "无TF卡", "1", "有TF卡，初始化"))));
+        Cursor cur = new Cursor(new byte[]{0x04}, 0);   // bit1~2=10，values 未定义 2
+        List<com.xx.jttprotocolparse.core.result.Issue> issues = new ArrayList<>();
+        Node n = FieldCodec.parseOne(f, cur, null, issues, "终端状态");
+
+        assertTrue(issues.isEmpty(), issues.toString());
+        assertEquals("2", n.getValue());
     }
 
     @Test
