@@ -57,22 +57,37 @@ label: GB/T 32960.3 新能源汽车国标
           type: u2
           scale: 0.1
           unit: km/h
+          invalid:
+              "0xFFFE": 异常
+              "0xFFFF": 无效
         - label: 累计里程
           type: u4
           scale: 0.1
           unit: km
+          invalid:
+              "0xFFFFFFFE": 异常
+              "0xFFFFFFFF": 无效
         - label: 总电压
           type: u2
           scale: 0.1
           unit: V
+          invalid:
+              "0xFFFE": 异常
+              "0xFFFF": 无效
         - label: 总电流
           type: u2
           offset: 1000
           scale: 0.1
           unit: A
+          invalid:
+              "0xFFFE": 异常
+              "0xFFFF": 无效
         - label: SOC
           type: u1
           unit: "%"
+          invalid:
+              "0xFE": 异常
+              "0xFF": 无效
         - label: DC-DC状态
           type: u1
           map:
@@ -88,9 +103,15 @@ label: GB/T 32960.3 新能源汽车国标
         - label: 加速踏板行程值
           type: u1
           unit: "%"
+          invalid:
+              "0xFE": 异常
+              "0xFF": 无效
         - label: 制动踏板状态
           type: u1
           unit: "%"
+          invalid:
+              "0xFE": 异常
+              "0xFF": 无效
 
     "0x02":
       name: 驱动电机数据
@@ -113,28 +134,46 @@ label: GB/T 32960.3 新能源汽车国标
               type: u1
               offset: 40
               unit: ℃
+              invalid:
+                  "0xFE": 缺省值
+                  "0xFF": 无效值
             - label: 驱动电机转速
               type: u2
               offset: 30000
               unit: r/min
+              invalid:
+                  "0xFFFE": 缺省值
+                  "0xFFFF": 无效值
             - label: 驱动电机温度
               type: u1
               offset: 40
               unit: ℃
+              invalid:
+                  "0xFE": 缺省值
+                  "0xFF": 无效值
             - label: 驱动电机转矩
               type: u2
               offset: 20000
               scale: 0.1
               unit: N·m
+              invalid:
+                  "0xFFFE": 异常
+                  "0xFFFF": 无效
             - label: 电机控制器输入电压
               type: u2
               scale: 0.1
               unit: V
+              invalid:
+                  "0xFFFE": 异常
+                  "0xFFFF": 无效
             - label: 电机控制器直流母线电流
               type: u2
               offset: 1000
               scale: 0.1
               unit: A
+              invalid:
+                  "0xFFFE": 异常
+                  "0xFFFF": 无效
 
     "0x03":
       name: 燃料电池数据
@@ -143,16 +182,28 @@ label: GB/T 32960.3 新能源汽车国标
           type: u2
           scale: 0.1
           unit: V
+          invalid:
+              "0xFFFE": 异常
+              "0xFFFF": 无效
         - label: 燃料电池电流
           type: u2
           scale: 0.1
           unit: A
+          invalid:
+              "0xFFFE": 异常
+              "0xFFFF": 无效
         - label: 燃料消耗率
           type: u2
           scale: 0.01
           unit: kg/100km
+          invalid:
+              "0xFFFE": 异常
+              "0xFFFF": 无效
         - label: 燃料电池温度探针总数
           type: u2
+          invalid:
+              "0xFFFE": 异常
+              "0xFFFF": 无效
         - label: 探针温度值
           type: group
           count: "$燃料电池温度探针总数"
@@ -166,19 +217,34 @@ label: GB/T 32960.3 新能源汽车国标
           scale: 0.01
           offset: 4000
           unit: ℃
+          invalid:
+              "0xFFFE": 异常
+              "0xFFFF": 无效
         - label: 氢系统中最高温度探针代号
           type: u1
+          invalid:
+              "0xFE": 异常
+              "0xFF": 无效
         - label: 氢气最高浓度
           type: u2
           unit: mg/kg
+          invalid:
+              "0xFFFE": 异常
+              "0xFFFF": 无效
         - label: 氢气最高浓度传感器代号
           type: u1
+          invalid:
+              "0xFE": 异常
+              "0xFF": 无效
         - label: 氢气最高压力
           type: u2
           scale: 0.1
           unit: MPa
         - label: 氢气最高压力传感器代号
           type: u1
+          invalid:
+              "0xFE": 异常
+              "0xFF": 无效
         - label: 高压DC-DC状态
           type: u1
           map:
@@ -200,10 +266,16 @@ label: GB/T 32960.3 新能源汽车国标
         - label: 曲轴转速
           type: u2
           unit: r/min
+          invalid:
+              "0xFFFE": 异常
+              "0xFFFF": 无效
         - label: 燃料消耗率
           type: u2
           scale: 0.01
           unit: L/100km
+          invalid:
+              "0xFFFE": 异常
+              "0xFFFF": 无效
 
     "0x05":
       name: 车辆位置数据
@@ -228,36 +300,72 @@ label: GB/T 32960.3 新能源汽车国标
       body:
         - label: 最高电压电池子系统号
           type: u1
+          invalid:
+              "0xFE": 异常
+              "0xFF": 无效
         - label: 最高电压电池单体代号
           type: u1
+          invalid:
+              "0xFE": 异常
+              "0xFF": 无效
         - label: 电池单体电压最高值
           type: u2
           scale: 0.001
           unit: V
+          invalid:
+              "0xFFFE": 异常
+              "0xFFFF": 无效
         - label: 最低电压电池子系统号
           type: u1
+          invalid:
+              "0xFE": 异常
+              "0xFF": 无效
         - label: 最低电压电池单体代号
           type: u1
+          invalid:
+              "0xFE": 异常
+              "0xFF": 无效
         - label: 电池单体电压最低值
           type: u2
           scale: 0.001
           unit: V
+          invalid:
+              "0xFFFE": 异常
+              "0xFFFF": 无效
         - label: 最高温度子系统号
           type: u1
+          invalid:
+              "0xFE": 异常
+              "0xFF": 无效
         - label: 最高温度探针序号
           type: u1
+          invalid:
+              "0xFE": 异常
+              "0xFF": 无效
         - label: 最高温度值
           type: u1
           offset: 40
           unit: ℃
+          invalid:
+              "0xFE": 异常
+              "0xFF": 无效
         - label: 最低温度子系统号
           type: u1
+          invalid:
+              "0xFE": 异常
+              "0xFF": 无效
         - label: 最低温度探针序号
           type: u1
+          invalid:
+              "0xFE": 异常
+              "0xFF": 无效
         - label: 最低温度值
           type: u1
           offset: 40
           unit: ℃
+          invalid:
+              "0xFE": 异常
+              "0xFF": 无效
 
     "0x07":
       name: 报警数据
@@ -295,6 +403,9 @@ label: GB/T 32960.3 新能源汽车国标
             "18": 车载储能装置类型过充
         - label: 可充电储能装置故障总数
           type: u1
+          invalid:
+              "0xFE": 异常
+              "0xFF": 无效
         - label: 可充电储能装置故障代码列表
           type: group
           count: "$可充电储能装置故障总数"
@@ -304,6 +415,9 @@ label: GB/T 32960.3 新能源汽车国标
               length: 4
         - label: 驱动电机故障总数
           type: u1
+          invalid:
+              "0xFE": 异常
+              "0xFF": 无效
         - label: 驱动电机故障代码列表
           type: group
           count: "$驱动电机故障总数"
@@ -313,6 +427,9 @@ label: GB/T 32960.3 新能源汽车国标
               length: 4
         - label: 发动机故障总数
           type: u1
+          invalid:
+              "0xFE": 异常
+              "0xFF": 无效
         - label: 发动机故障代码列表
           type: group
           count: "$发动机故障总数"
@@ -322,6 +439,9 @@ label: GB/T 32960.3 新能源汽车国标
               length: 4
         - label: 其他故障总数
           type: u1
+          invalid:
+              "0xFE": 异常
+              "0xFF": 无效
         - label: 其他故障代码列表
           type: group
           count: "$其他故障总数"
@@ -335,6 +455,9 @@ label: GB/T 32960.3 新能源汽车国标
       body:
         - label: 可充电储能子系统个数
           type: u1
+          invalid:
+              "0xFE": 异常
+              "0xFF": 无效
         - label: 可充电储能子系统电压信息列表
           type: group
           count: "$可充电储能子系统个数"
@@ -345,13 +468,22 @@ label: GB/T 32960.3 新能源汽车国标
               type: u2
               scale: 0.1
               unit: V
+              invalid:
+                  "0xFFFE": 异常
+                  "0xFFFF": 无效
             - label: 可充电储能装置电流
               type: u2
               offset: 1000
               scale: 0.1
               unit: A
+              invalid:
+                  "0xFFFE": 异常
+                  "0xFFFF": 无效
             - label: 单体电池总数
               type: u2
+              invalid:
+                  "0xFFFE": 异常
+                  "0xFFFF": 无效
             - label: 本帧起始电池序号
               type: u2
             - label: 本帧单体电池总数
@@ -364,12 +496,18 @@ label: GB/T 32960.3 新能源汽车国标
                   type: u2
                   scale: 0.001
                   unit: V
+                  invalid:
+                      "0xFFFE": 异常
+                      "0xFFFF": 无效
 
     "0x09":
       name: 可充电储能装置温度数据
       body:
         - label: 可充电储能子系统个数
           type: u1
+          invalid:
+              "0xFE": 异常
+              "0xFF": 无效
         - label: 可充电储能子系统温度信息列表
           type: group
           count: "$可充电储能子系统个数"
@@ -378,6 +516,9 @@ label: GB/T 32960.3 新能源汽车国标
               type: u1
             - label: 可充电储能温度探针个数
               type: u2
+              invalid:
+                  "0xFFFE": 异常
+                  "0xFFFF": 无效
             - label: 可充电储能子系统温度值列表
               type: group
               count: "$可充电储能温度探针个数"
@@ -386,6 +527,9 @@ label: GB/T 32960.3 新能源汽车国标
                   type: u1
                   offset: 40
                   unit: ℃
+                  invalid:
+                      "0xFE": 异常
+                      "0xFF": 无效
 
     "0x80":
       name: 扩展部分数据
@@ -474,3 +618,4 @@ label: GB/T 32960.3 新能源汽车国标
     - label: 待核对部分
       type: raw
       length: rest
+
