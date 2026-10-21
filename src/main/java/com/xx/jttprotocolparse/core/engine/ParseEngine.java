@@ -67,43 +67,58 @@ public final class ParseEngine {
         FrameAdapter adapter = adapters.get(protocol);
         if (adapter == null) {
             r.getIssues().add(Issue.of("protocol", IssueCode.UNSUPPORTED_PROTOCOL, "暂不支持的协议: " + protocol));
+            packUnknown(r, "不支持的协议，报文整体原样保留", msg);
             return r;
         }
+        // 拆帧在协议描述之前：即使协议 YAML 未登记，报文头与数据单元边界也是帧层已知的
+        Frame frame = adapter.parse(msg, r.getIssues());
+        if (frame == null) {
+            packUnknown(r, "未识别为 " + adapter.protocolId() + " 报文，报文整体原样保留", msg);
+            return r;
+        }
+        r.getNodes().addAll(frame.header());
+
         ProtocolSpec d = registry.dialect(protocol, version, r.getVendor());
         if (d == null) {
             r.getIssues().add(Issue.of("protocol", IssueCode.UNSUPPORTED_PROTOCOL,
                     "协议描述缺失: " + protocol + " / " + version + (r.getVendor() == null ? "" : " / " + r.getVendor())));
-            return r;
+            packUnknown(r, "协议描述未登记，数据单元原样保留", frame.payload());
+            return addTrailer(r, frame);
         }
         r.setVersion(d.getVersion());
-
-        Frame frame = adapter.parse(msg, r.getIssues());
-        if (frame == null) {
-            return r;
-        }
-        r.getHeader().addAll(frame.header());
 
         CommandSpec cmd = d.getCommands().get(frame.command());
         if (cmd == null) {
             r.getIssues().add(Issue.of("command", IssueCode.UNKNOWN_COMMAND,
                     String.format("未知命令字 0x%02X，数据单元 %d 字节原样保留", frame.command(), frame.payload().length)));
-            Node raw = new Node("数据单元(未知命令)").setValue(HexUtil.encode(frame.payload()));
-            r.getBody().add(raw);
-            return r;
+            packUnknown(r, String.format("未知命令字 0x%02X", frame.command()), frame.payload());
+            return addTrailer(r, frame);
         }
         r.setReport(d.prefix() + " · " + cmd.getName());
         decorateCommandNode(frame, cmd);
 
         if (cmd.isStream()) {
             stream(frame.payload(), cmd, r);
-            return r;
+            return addTrailer(r, frame);
         }
         if (cmd.getBody() == null) {
             noBody(cmd, frame.payload(), r);
-            return r;
+            return addTrailer(r, frame);
         }
-        parseBody(frame.payload(), cmd.getBody(), cmd.getName(), r.getBody(), r.getIssues(), "body");
+        parseBody(frame.payload(), cmd.getBody(), cmd.getName(), r.getNodes(), r.getIssues(), "body");
+        return addTrailer(r, frame);
+    }
+
+    /** 数据体之后的收尾节点列表（校验码）追加到输出尾，保证展示顺序 = 协议字节顺序 */
+    private ParseResult addTrailer(ParseResult r, Frame frame) {
+        r.getNodes().addAll(frame.trailer());
         return r;
+    }
+
+    /** 未匹配统一收口：解析到此为止，剩余部分打包为「未知报文」节点展示报文原文 */
+    private void packUnknown(ParseResult r, String why, byte[] rest) {
+        String hex = HexUtil.encode(rest);
+        r.getNodes().add(new Node("未知报文").setValue(hex).setRaw(hex).setNote(why));
     }
 
     /** 报文头命令节点补上中文名（节点 label 由帧层创建，故用帧层提供的常量定位） */
@@ -122,7 +137,7 @@ public final class ParseEngine {
         }
         r.getIssues().add(Issue.of("body", IssueCode.BODY_UNEXPECTED,
                 cmd.getName() + " 未配置数据体，实际 " + payload.length + " 字节，原样保留"));
-        r.getBody().add(new Node("多余数据体").setValue(HexUtil.encode(payload)));
+        r.getNodes().add(new Node("多余数据体").setValue(HexUtil.encode(payload)));
     }
 
     // ------------------------------------------------- stream 型数据体（0x02/0x03）
@@ -138,10 +153,10 @@ public final class ParseEngine {
             Node prefix = new Node();
             FieldCodec.parseFields(cmd.getBody(), cur, prefix, r.getIssues(), "body");
             if (prefix.getChildren() != null) {
-                r.getBody().addAll(prefix.getChildren());
+                r.getNodes().addAll(prefix.getChildren());
             }
             if (r.getIssues().size() > before) {
-                dumpRest(cur, r.getBody());
+                dumpRest(cur, r.getNodes());
                 return;
             }
         }
@@ -161,7 +176,7 @@ public final class ParseEngine {
                         "子报文 0x%02X %s，无法确定长度，剩余 %d 字节原样保留", type, why, cur.remaining())));
                 node.setValue(rest).setRaw(HexUtil.slice(payload, cur.getPos(), cur.remaining()))
                         .setNote(why + "，剩余字节原样保留");
-                r.getBody().add(node);
+                r.getNodes().add(node);
                 return;
             }
 
@@ -169,15 +184,15 @@ public final class ParseEngine {
             FieldCodec.parseFields(st.getBody(), cur, node, r.getIssues(), "body");
             int consumed = cur.getPos() - start;
             node.setRaw(HexUtil.slice(payload, start, consumed));
-            r.getBody().add(node);
+            r.getNodes().add(node);
             if (consumed <= 1) {
                 r.getIssues().add(Issue.of("body", IssueCode.UNKNOWN_SUBTYPE, String.format(
                         "子报文 0x%02X 未消费任何字节，剩余 %d 字节原样保留", type, cur.remaining())));
-                dumpRest(cur, r.getBody());
+                dumpRest(cur, r.getNodes());
                 return;
             }
             if (r.getIssues().size() > before) {
-                dumpRest(cur, r.getBody());
+                dumpRest(cur, r.getNodes());
                 return;
             }
         }

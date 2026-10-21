@@ -19,8 +19,8 @@ public class ParseResult {
     private String report;
     /** true = 无任何问题；否则看 issues */
     private boolean ok;
-    private List<Node> header = new ArrayList<>();
-    private List<Node> body = new ArrayList<>();
+    /** 按协议字节顺序拼接的所有展示节点：报文头 → 数据体 → 校验码，不再区分 header/body */
+    private List<Node> nodes = new ArrayList<>();
     private List<Issue> issues = new ArrayList<>();
 
     public static ParseResult failed(String protocol, String version, Issue... issues) {

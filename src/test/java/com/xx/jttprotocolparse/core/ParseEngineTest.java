@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -52,16 +53,18 @@ class ParseEngineTest {
         assertEquals("GB/T 32960.3 新能源汽车国标 · breton · 车辆登录", r.getReport());
         assertEquals("2026-10-20 17:35:00", value(children(r), "登录时间"));
         assertEquals("1", value(children(r), "登录序号"));
+        // 单流输出尾部 = 校验码
+        assertEquals("校验码(BCC)", r.getNodes().get(r.getNodes().size() - 1).getLabel());
     }
 
     @Test
     void realtimeVehicleData() {
         ParseResult r = one(REALTIME);
         assertTrue(r.isOk(), issues(r));
-        assertEquals("2026-10-20 17:35:00", value(r.getBody(), "数据采集时间"));
+        assertEquals("2026-10-20 17:35:00", value(r.getNodes(), "数据采集时间"));
 
-        Node vehicle = r.getBody().get(1);
-        assertEquals("整车数据", vehicle.getLabel());
+        Node vehicle = node(r.getNodes(), "整车数据");
+        assertNotNull(vehicle, "整车数据节点缺失");
         List<Node> fields = vehicle.getChildren();
         assertEquals("启动态", value(fields, "车辆状态"));
         assertEquals("未充电状态", value(fields, "充电状态"));
@@ -77,8 +80,8 @@ class ParseEngineTest {
         assertEquals("0", value(fields, "加速踏板行程值"));
         assertEquals("0", value(fields, "制动踏板状态"));
 
-        Node motorPacket = r.getBody().get(2);
-        assertEquals("驱动电机数据", motorPacket.getLabel());
+        Node motorPacket = node(r.getNodes(), "驱动电机数据");
+        assertNotNull(motorPacket, "驱动电机数据节点缺失");
         assertEquals("1", value(motorPacket.getChildren(), "驱动电机个数"));
         Node motor = node(motorPacket.getChildren(), "驱动电机总成信息列表 1");
         assertNotNull(motor, "驱动电机总成信息列表节点缺失");
@@ -97,31 +100,34 @@ class ParseEngineTest {
     void realtimeAllSubtypes() {
         ParseResult r = one(frame(0x02, 0xFE, ALL_SUBTYPES_BODY));
         assertTrue(r.isOk(), issues(r));
-        assertEquals(11, r.getBody().size(), "采集时间 + 10 个子报文");
+        // 6 报文头 + 采集时间 + 10 个子报文 + 校验码
+        assertEquals(18, r.getNodes().size());
+        // 单流顺序：报文头在前、主体居中、校验码收尾
+        assertEquals("起始符", r.getNodes().get(0).getLabel());
+        assertEquals("整车数据", r.getNodes().get(7).getLabel());
+        assertEquals("驱动电机数据", r.getNodes().get(8).getLabel());
+        assertEquals("燃料电池数据", r.getNodes().get(9).getLabel());
+        assertEquals("发动机数据", r.getNodes().get(10).getLabel());
+        assertEquals("车辆位置数据", r.getNodes().get(11).getLabel());
+        assertEquals("极值数据", r.getNodes().get(12).getLabel());
+        assertEquals("报警数据", r.getNodes().get(13).getLabel());
+        assertEquals("可充电储能装置电压数据", r.getNodes().get(14).getLabel());
+        assertEquals("可充电储能装置温度数据", r.getNodes().get(15).getLabel());
+        assertEquals("扩展部分数据", r.getNodes().get(16).getLabel());
+        assertEquals("校验码(BCC)", r.getNodes().get(17).getLabel());
 
-        assertEquals("整车数据", r.getBody().get(1).getLabel());
-        assertEquals("驱动电机数据", r.getBody().get(2).getLabel());
-        assertEquals("燃料电池数据", r.getBody().get(3).getLabel());
-        assertEquals("发动机数据", r.getBody().get(4).getLabel());
-        assertEquals("车辆位置数据", r.getBody().get(5).getLabel());
-        assertEquals("极值数据", r.getBody().get(6).getLabel());
-        assertEquals("报警数据", r.getBody().get(7).getLabel());
-        assertEquals("可充电储能装置电压数据", r.getBody().get(8).getLabel());
-        assertEquals("可充电储能装置温度数据", r.getBody().get(9).getLabel());
-        assertEquals("扩展部分数据", r.getBody().get(10).getLabel());
-
-        Node fuelCell = r.getBody().get(3);
+        Node fuelCell = r.getNodes().get(9);
         assertEquals("2", value(fuelCell.getChildren(), "燃料电池温度探针总数"));
         assertEquals("-10", value(fuelCell.getChildren(), "氢系统中最高温度")); // 3000*0.01 - 40
         Node probe = node(fuelCell.getChildren(), "探针温度值 1");
         assertNotNull(probe);
         assertEquals("10", value(probe.getChildren(), "探针温度"));
 
-        Node position = r.getBody().get(5);
+        Node position = r.getNodes().get(11);
         assertEquals("有效定位；北纬；东经", value(position.getChildren(), "定位状态"));
         assertEquals("123.456789", value(position.getChildren(), "经度"));
 
-        Node alarm = r.getBody().get(7);
+        Node alarm = r.getNodes().get(13);
         assertEquals("一级故障", value(alarm.getChildren(), "最高报警等级"));
         // 通用报警标志：19 段各带 label，输出为子节点行（label: 值）
         Node flags = node(alarm.getChildren(), "通用报警标志");
@@ -136,21 +142,21 @@ class ParseEngineTest {
         assertNotNull(fault);
         assertEquals("00000001", value(fault.getChildren(), "故障代码"));
 
-        Node battery = r.getBody().get(8);
+        Node battery = r.getNodes().get(14);
         Node subsystem = node(battery.getChildren(), "可充电储能子系统电压信息列表 1");
         assertNotNull(subsystem);
         Node voltages = node(subsystem.getChildren(), "单体电池电压列表 1");
         assertNotNull(voltages);
         assertEquals("3", value(voltages.getChildren(), "单体电池电压"));  // 0x0BB8 * 0.001
 
-        Node temp = r.getBody().get(9);
+        Node temp = r.getNodes().get(15);
         Node tempItem = node(temp.getChildren(), "可充电储能子系统温度信息列表 1");
         assertNotNull(tempItem);
         Node tempList = node(tempItem.getChildren(), "可充电储能子系统温度值列表 1");
         assertNotNull(tempList);
         assertEquals("10", value(tempList.getChildren(), "温度值"));
 
-        Node ext = r.getBody().get(10);
+        Node ext = r.getNodes().get(16);
         assertEquals("22", value(ext.getChildren(), "自定义数据长度"));
         // 终端状态：两段各带 label，输出为子节点行
         Node terminal = node(ext.getChildren(), "终端状态");
@@ -172,15 +178,56 @@ class ParseEngineTest {
         String bad = LOGIN.substring(0, LOGIN.length() - 2) + "90";
         ParseResult r = one(bad);
         assertTrue(r.getIssues().stream().anyMatch(i -> IssueCodeOf(i).equals("CHECKSUM_MISMATCH")), issues(r));
-        // 明文字段仍应解析出来（尽力解析）
+        // 明文字段仍应解析出来（尽力解析），校验码节点尾部标注校验不符
         assertEquals("2026-10-20 17:35:00", value(children(r), "登录时间"));
+        Node bcc = r.getNodes().get(r.getNodes().size() - 1);
+        assertEquals("校验码(BCC)", bcc.getLabel());
+        assertEquals("校验不符", bcc.getCheck());
     }
 
     @Test
     void unknownCommand() {
         ParseResult r = one(frame(0x7F, 0xFE, "000102"));
         assertTrue(r.getIssues().stream().anyMatch(i -> IssueCodeOf(i).equals("UNKNOWN_COMMAND")), issues(r));
-        assertEquals("000102", value(r.getBody(), "数据单元(未知命令)"));
+        // 统一收口：数据单元打包「未知报文」，展示报文原文
+        Node unk = node(r.getNodes(), "未知报文");
+        assertNotNull(unk, "未知报文节点缺失");
+        assertEquals("000102", unk.getValue());
+        assertEquals("未知命令字 0x7F", unk.getNote());
+        assertEquals("校验码(BCC)", r.getNodes().get(r.getNodes().size() - 1).getLabel());
+    }
+
+    @Test
+    void protocolNotRegistered_头部正常剩余打包未知() {
+        // 帧层认识 gc-32960，但厂商未登记：报文头正常解析，数据单元打包「未知报文」
+        ParseResult r = engine.parse("gc-32960", "2016", "no-vendor", LOGIN).get(0);
+        assertFalse(r.isOk(), issues(r));
+        assertTrue(r.getIssues().stream().anyMatch(i -> IssueCodeOf(i).equals("UNSUPPORTED_PROTOCOL")), issues(r));
+        assertEquals("##", value(r.getNodes(), "起始符"));
+        Node unk = node(r.getNodes(), "未知报文");
+        assertNotNull(unk, "未知报文节点缺失");
+        assertEquals("1A0A141123000001", unk.getValue());
+        // 校验码仍在数据单元收尾位置
+        assertEquals("校验码(BCC)", r.getNodes().get(r.getNodes().size() - 1).getLabel());
+    }
+
+    @Test
+    void adapterMissing_整条打包未知() {
+        ParseEngine noAdapter = new ParseEngine(new DescriptorRegistry(), List.of());
+        ParseResult r = noAdapter.parse("gc-32960", "2016", "breton", LOGIN).get(0);
+        assertTrue(r.getIssues().stream().anyMatch(i -> IssueCodeOf(i).equals("UNSUPPORTED_PROTOCOL")), issues(r));
+        Node unk = node(r.getNodes(), "未知报文");
+        assertNotNull(unk, "未知报文节点缺失");
+        assertEquals(LOGIN, unk.getValue());
+    }
+
+    @Test
+    void frameNotMatch_整条打包未知() {
+        ParseResult r = one("1234AABBCC");
+        assertTrue(r.getIssues().stream().anyMatch(i -> IssueCodeOf(i).equals("FRAME_NOT_MATCH")), issues(r));
+        Node unk = node(r.getNodes(), "未知报文");
+        assertNotNull(unk, "未知报文节点缺失");
+        assertEquals("1234AABBCC", unk.getValue());
     }
 
     @Test
@@ -198,9 +245,9 @@ class ParseEngineTest {
         ParseResult r = one(frame(0x03, 0xFE, REALTIME_BODY));
         assertTrue(r.isOk(), issues(r));
         assertEquals("GB/T 32960.3 新能源汽车国标 · breton · 补发信息上报", r.getReport());
-        assertEquals("2026-10-20 17:35:00", value(r.getBody(), "数据采集时间"));
-        Node packet = r.getBody().get(1);
-        assertEquals("整车数据", packet.getLabel());
+        assertEquals("2026-10-20 17:35:00", value(r.getNodes(), "数据采集时间"));
+        Node packet = node(r.getNodes(), "整车数据");
+        assertNotNull(packet, "整车数据节点缺失");
         assertEquals("100", value(packet.getChildren(), "车速"));
     }
 
@@ -209,8 +256,8 @@ class ParseEngineTest {
         // 0x0A 未在 subtype 表中定义，无法确定长度：记录 issue，剩余字节原样保留
         ParseResult r = one(frame(0x02, 0xFE, "1A0A14112300" + "0A" + "AABBCC"));
         assertTrue(r.getIssues().stream().anyMatch(i -> IssueCodeOf(i).equals("UNKNOWN_SUBTYPE")), issues(r));
-        Node packet = r.getBody().get(1);
-        assertEquals("未知子报文 0x0A", packet.getLabel());
+        Node packet = node(r.getNodes(), "未知子报文 0x0A");
+        assertNotNull(packet, "未知子报文节点缺失");
         assertEquals("AABBCC", packet.getValue());
     }
 
@@ -263,7 +310,7 @@ class ParseEngineTest {
     }
 
     private static List<Node> children(ParseResult r) {
-        return r.getBody().get(0).getChildren();
+        return node(r.getNodes(), "车辆登录").getChildren();
     }
 
     private static String value(List<Node> list, String label) {

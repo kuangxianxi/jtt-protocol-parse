@@ -7,6 +7,8 @@ import java.util.List;
 /** 协议帧层解析结果：报文头各字段的展示节点 + 路由所需的关键值 */
 public record Frame(
         List<Node> header,
+        /** 数据单元之后的收尾节点（如校验码），引擎在数据体解析完后追加到输出列表尾 */
+        List<Node> trailer,
         int command,
         int ack,
         String vin,

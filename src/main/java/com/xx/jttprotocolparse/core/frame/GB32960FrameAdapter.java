@@ -79,6 +79,7 @@ public final class GB32960FrameAdapter implements FrameAdapter {
             }
         }
         return new Frame(headerNodes(m, command, ack, vin, enc, declaredLen, checksumOk),
+                trailerNodes(m, checksumOk),
                 command, ack, vin, enc, declaredLen, payload, checksumOk);
     }
 
@@ -130,10 +131,14 @@ public final class GB32960FrameAdapter implements FrameAdapter {
                 .setValue(String.valueOf(declaredLen))
                 .setRaw(HexUtil.slice(m, 22, 2))
                 .setCheck(checksumOk ? "与实际一致" : "与实际不符"));
-        out.add(new Node("校验码(BCC)")
+        return out;
+    }
+
+    /** 数据单元之后的收尾展示节点：校验码（BCC） */
+    private static List<Node> trailerNodes(byte[] m, boolean checksumOk) {
+        return List.of(new Node("校验码(BCC)")
                 .setValue(String.format("0x%02X", m[m.length - 1] & 0xFF))
                 .setRaw(HexUtil.slice(m, m.length - 1, 1))
                 .setCheck(checksumOk ? "校验通过" : "校验不符"));
-        return out;
     }
 }
