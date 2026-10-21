@@ -25,7 +25,6 @@ class ParseEngineTest {
 
     // 与 web/index.html 样例保持一致
     private static final String LOGIN = "232301FE" + VIN + "0100081A0A14112300000195";
-    private static final String HEARTBEAT = "232306FE" + VIN + "010000AD";
 
     // 实时上报：采集时间(十进制字节) + 整车数据(0x01, 20B) + 驱动电机数据(0x02, 1B个数 + 1个电机12B)
     private static final String REALTIME_BODY = "1A0A14112300"
@@ -53,13 +52,6 @@ class ParseEngineTest {
         assertEquals("GB/T 32960.3 新能源汽车国标 · breton · 车辆登录", r.getReport());
         assertEquals("2026-10-20 17:35:00", value(children(r), "登录时间"));
         assertEquals("1", value(children(r), "登录序号"));
-    }
-
-    @Test
-    void heartbeat() {
-        ParseResult r = one(HEARTBEAT);
-        assertTrue(r.isOk(), issues(r));
-        assertTrue(r.getBody().isEmpty());
     }
 
     @Test
@@ -177,18 +169,12 @@ class ParseEngineTest {
 
     @Test
     void multiPaste() {
-        List<ParseResult> rs = engine.parse("gc-32960", "2016", "breton", LOGIN + "\n\n" + HEARTBEAT + "\n1 2");
+        // 多条粘贴：登录报文 / 实时上报 / 非报文杂串
+        List<ParseResult> rs = engine.parse("gc-32960", "2016", "breton", LOGIN + "\n\n" + REALTIME + "\n1 2");
         assertEquals(3, rs.size());
         assertTrue(rs.get(0).isOk());
         assertTrue(rs.get(1).isOk());
         assertTrue(rs.get(2).getIssues().stream().anyMatch(i -> IssueCodeOf(i).equals("FRAME_NOT_MATCH")), issues(rs.get(2)));
-    }
-
-    @Test
-    void heartbeatWithPayload_recordsUnexpectedBody() {
-        ParseResult r = one(frame(0x06, 0xFE, "AABB"));
-        assertTrue(r.getIssues().stream().anyMatch(i -> IssueCodeOf(i).equals("BODY_UNEXPECTED")), issues(r));
-        assertEquals("AABB", value(r.getBody(), "多余数据体"));
     }
 
     @Test

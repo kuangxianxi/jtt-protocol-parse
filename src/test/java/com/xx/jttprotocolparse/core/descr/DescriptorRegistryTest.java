@@ -42,9 +42,8 @@ class DescriptorRegistryTest {
         assertTrue(resend.isStream());
         assertSame(realtime.getSubtype(), resend.getSubtype()); // subtypeRef 共享同一张表
 
-        CommandSpec heartbeat = d.getCommands().get(0x06);
-        assertNull(heartbeat.getBody());
-        assertFalse(heartbeat.isStream());
+        // 范围收敛：平台方向命令（0x04~0x07/0x81）有意不登记，解析时按 UNKNOWN_COMMAND 记 issue
+        assertNull(d.getCommands().get(0x06));
     }
 
     @Test

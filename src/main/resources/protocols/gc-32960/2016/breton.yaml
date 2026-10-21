@@ -1,5 +1,8 @@
 # GB/T 32960.3-2016 通信协议及数据格式（国标基准）
 #
+# 配置范围（有意收敛）：只登记实时数据方向命令 0x01 车辆登录 / 0x02 实时信息上报 / 0x03 补发信息上报；
+# 平台方向（平台登录/登出、心跳、终端校时、车辆登出）不登记，遇到时按 UNKNOWN_COMMAND 记 issue 并原样保留。
+#
 # 结构：命令码 → name / body（字段列表）/ subtype（类型码 → name / body）。
 # body 与 subtype 可以并存：body 是子报文之前的固定前缀（如 0x02 的采集时间）。
 # 字段没有 id：节点标识、issue path、$ 变量引用统一用 label。
@@ -568,54 +571,10 @@ label: GB/T 32960.3 新能源汽车国标
               type: raw
               length: "$Can帧数据长度"
 
-    # 0x0A~0x2F 平台交换自定义数据、0x81~0xFE 其他自定义部分：协议文档未给出结构，
-    # 遇到时解析器无法确定长度，会记录 UNKNOWN_SUBTYPE 并把剩余字节原样保留。
-
 "0x03":
   name: 补发信息上报
   body:
     - label: 数据采集时间
       type: dec-time
   subtypeRef: "0x02"
-
-"0x04":
-  name: 平台登录
-  body:
-    - label: 登录时间
-      type: dec-time
-    - label: 登录序号
-      type: u2
-    # TODO 待标准核对
-    - label: 账号/密码(待核对)
-      type: raw
-      length: rest
-
-"0x05":
-  name: 平台登出
-  body:
-    - label: 登出时间
-      type: dec-time
-    # TODO 待标准核对
-    - label: 待核对部分
-      type: raw
-      length: rest
-
-"0x06":
-  name: 心跳
-
-"0x07":
-  name: 终端校时
-  body:
-    - label: 校时时间
-      type: dec-time
-
-"0x81":
-  name: 车辆登出
-  body:
-    - label: 登出时间
-      type: dec-time
-    # TODO 待标准核对
-    - label: 待核对部分
-      type: raw
-      length: rest
 
