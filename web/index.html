@@ -29,9 +29,6 @@
   .note { color:var(--m); font-size:12px; }
   .check-ok { color:var(--ok); font-size:12px; } .check-bad { color:var(--bad); font-size:12px; }
   .kids { margin-left:14px; border-left:2px solid var(--bg); padding-left:10px; margin-top:2px; }
-  .issues { margin-top:10px; }
-  .issue { background:#fdf0ef; border:1px solid #f3c3bf; border-radius:6px; padding:5px 9px; margin-top:5px; font-size:12px; }
-  .issue .code { font-family:ui-monospace,monospace; color:var(--bad); margin-right:6px; }
   .empty { color:var(--m); margin-top:18px; }
 </style>
 </head>
@@ -54,21 +51,13 @@
 
   <textarea v-model="hexText" placeholder="粘贴 hex 报文（多条报文用空行分隔）"></textarea>
 
-  <div v-if="!results.length" class="empty">输入报文点「解析」即可看到明文与问题提示。</div>
+  <div v-if="!results.length" class="empty">输入报文点「解析」即可看到明文。</div>
 
   <div v-for="(r, ri) in results" :key="ri" class="result">
     <h2>{{ r.report }} <span :class="r.ok ? 'okc' : 'bad'">{{ r.ok ? '✓' : '⚠' }}</span></h2>
 
-    <div v-for="(is, ii) in r.issues" :key="ii" class="issues">
-      <div class="issue"><span class="code">{{ is.code }}</span>{{ is.message }} <span class="note">@{{ is.path }}</span></div>
-    </div>
-
-    <h3 class="sec">报文头</h3>
-    <div v-for="(n, i) in r.header" :key="i"><field-node :node="n"></field-node></div>
-
-    <h3 class="sec">数据体</h3>
-    <div v-if="!r.body || !r.body.length" class="note">（无数据体）</div>
-    <div v-for="(n, i) in r.body" :key="i"><field-node :node="n"></field-node></div>
+    <!-- 单流渲染：报文头 → 数据体 → 校验码，顺序即协议字节顺序 -->
+    <div v-for="(n, i) in r.nodes" :key="i"><field-node :node="n"></field-node></div>
   </div>
 </div>
 
