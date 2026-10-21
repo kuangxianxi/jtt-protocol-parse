@@ -18,7 +18,7 @@ import java.util.TreeMap;
 /**
  * 字段解码器库。类型清单收敛于设计方案 §5.3：
  * u1/u2/u3/u4（无符号）、bcd-time、dec-time、ascii/gbk、raw、group(循环块) +
- * scale/offset/unit/map/bits/length("$label"/"rest")。
+ * scale/offset/unit/map/bits/invalid/length("$label"/"rest")。
  * 字段没有 id：节点标识、issue path、$ 变量引用统一使用 label。
  * 解码不了的问题一律进 issues 并定位 path，不中断整体解析。
  */
@@ -111,6 +111,12 @@ public final class FieldCodec {
         long u = unsigned(raw);
         long signed = "s1".equals(f.getType()) || "s2".equals(f.getType()) ? signed(raw) : u;
 
+        // 特殊值：命中显示中文，未命中落回正常解码
+        String special = firstMatch(f.getInvalid(), u, issues, path, "特殊值键无法解析");
+        if (special != null) {
+            n.setValue(special);
+            return;
+        }
         // 位表
         if (f.getBits() != null && !f.getBits().isEmpty()) {
             n.setValue(bitsLabel(f.getBits(), u, raw.length));
@@ -118,17 +124,8 @@ public final class FieldCodec {
         }
         // 枚举映射（按原值）；未命中直接显示原值
         if (f.getMap() != null && !f.getMap().isEmpty()) {
-            for (Map.Entry<String, String> e : f.getMap().entrySet()) {
-                try {
-                    if (u == Long.decode(e.getKey().trim())) {
-                        n.setValue(e.getValue());
-                        return;
-                    }
-                } catch (NumberFormatException ignore) {
-                    issues.add(Issue.of(path, IssueCode.BAD_MAP_KEY, "枚举键无法解析: " + e.getKey()));
-                }
-            }
-            n.setValue(String.format("0x%02X", u));
+            String hit = firstMatch(f.getMap(), u, issues, path, "枚举键无法解析");
+            n.setValue(hit != null ? hit : String.format("0x%02X", u));
             return;
         }
         // 数值：offset 后乘 scale
@@ -188,6 +185,23 @@ public final class FieldCodec {
     /** 字段没有 id：节点标识 / path / $ 变量统一用 label */
     private static String key(FieldSpec f) {
         return f.getLabel() != null ? f.getLabel() : "field";
+    }
+
+    /** 「原值 → 中文」表中第一个命中的映射；键非法记问题后跳过 */
+    private static String firstMatch(Map<String, String> table, long u, List<Issue> issues, String path, String badKey) {
+        if (table == null) {
+            return null;
+        }
+        for (Map.Entry<String, String> e : table.entrySet()) {
+            try {
+                if (u == Long.decode(e.getKey().trim())) {
+                    return e.getValue();
+                }
+            } catch (NumberFormatException ignore) {
+                issues.add(Issue.of(path, IssueCode.BAD_MAP_KEY, badKey + ": " + e.getKey()));
+            }
+        }
+        return null;
     }
 
     private static long unsigned(byte[] raw) {

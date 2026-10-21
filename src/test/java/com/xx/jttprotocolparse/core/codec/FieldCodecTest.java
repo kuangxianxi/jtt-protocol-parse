@@ -59,6 +59,38 @@ class FieldCodecTest {
     }
 
     @Test
+    void invalid命中显示特殊值中文() {
+        FieldSpec f = new FieldSpec()
+                .setLabel("单体电压最低")
+                .setType("u2")
+                .setScale(0.001)
+                .setUnit("V")
+                .setInvalid(Map.of("0xFFFF", "异常"));
+        Cursor cur = new Cursor(new byte[]{(byte) 0xFF, (byte) 0xFF}, 0);
+        List<com.xx.jttprotocolparse.core.result.Issue> issues = new ArrayList<>();
+        Node n = FieldCodec.parseOne(f, cur, null, issues, "极值");
+
+        assertTrue(issues.isEmpty(), issues.toString());
+        assertEquals("异常", n.getValue());
+        assertEquals("FFFF", n.getRaw());
+        assertEquals(0, cur.remaining());
+    }
+
+    @Test
+    void invalid未命中按type转换() {
+        FieldSpec f = new FieldSpec()
+                .setLabel("单体电压最低")
+                .setType("u2")
+                .setScale(0.001);
+        Cursor cur = new Cursor(new byte[]{0x0B, (byte) 0xB8}, 0);
+        List<com.xx.jttprotocolparse.core.result.Issue> issues = new ArrayList<>();
+        Node n = FieldCodec.parseOne(f, cur, null, issues, "极值");
+
+        assertTrue(issues.isEmpty(), issues.toString());
+        assertEquals("3", n.getValue());
+    }
+
+    @Test
     void decTime_不足6字节记问题() {
         Cursor cur = new Cursor(new byte[]{0x1A, 0x0A, 0x14, 0x11, 0x23}, 0);
         List<com.xx.jttprotocolparse.core.result.Issue> issues = new ArrayList<>();

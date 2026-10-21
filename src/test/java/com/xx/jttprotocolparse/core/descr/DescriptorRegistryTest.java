@@ -1,14 +1,20 @@
 package com.xx.jttprotocolparse.core.descr;
 
+import com.xx.jttprotocolparse.core.descr.DescriptorRegistry;
 import com.xx.jttprotocolparse.core.model.CommandSpec;
+import com.xx.jttprotocolparse.core.model.FieldSpec;
 import com.xx.jttprotocolparse.core.model.ProtocolSpec;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class DescriptorRegistryTest {
@@ -47,6 +53,36 @@ class DescriptorRegistryTest {
         assertNull(registry.dialect("gc-32960", "2016", "unknown"));
         assertNull(registry.dialect("gc-32960", "2015", "breton"));
         assertNull(registry.dialect("unknown", "2016", "breton"));
+    }
+
+    @Test
+    void map与invalid同字段声明加载失败() {
+        FieldSpec f = new FieldSpec()
+                .setLabel("车辆状态")
+                .setType("u1")
+                .setMap(Map.of("0x01", "启动"))
+                .setInvalid(Map.of("0xFF", "无效"));
+
+        IllegalStateException e = assertThrows(IllegalStateException.class,
+                () -> DescriptorRegistry.checkFields(List.of(f), "命令 整车数据"));
+        assertTrue(e.getMessage().contains("不可同时声明 map 与 invalid"));
+    }
+
+    /** group 嵌套内的字段同样要被校验到 */
+    @Test
+    void map与invalid冲突校验覆盖group嵌套() {
+        FieldSpec inner = new FieldSpec()
+                .setLabel("转矩")
+                .setType("s2")
+                .setMap(Map.of("0x7FFF", "异常"))
+                .setInvalid(Map.of("0x8000", "无效"));
+        FieldSpec group = new FieldSpec()
+                .setLabel("驱动电机")
+                .setType("group")
+                .setCount("$个数")
+                .setFields(List.of(inner));
+
+        assertThrows(IllegalStateException.class, () -> DescriptorRegistry.checkFields(List.of(group), "子报文 电机"));
     }
 
     @Test

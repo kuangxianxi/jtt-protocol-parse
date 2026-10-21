@@ -40,6 +40,12 @@ public class FieldSpec {
     private String unit;
     /** 枚举映射：{"0x01": 启动态}；未命中时直接显示原值（如 0x7F） */
     private Map<String, String> map;
+    /**
+     * 特殊值映射：{"0xFFFF": 异常}。数值字段按原始字节的无符号值匹配（命中显示中文），
+     * 未命中按 type 正常转换（scale/offset）；解码优先级 invalid → bits → map → 数值。
+     * 与 map 互斥（加载期校验）：map = 纯枚举字段，invalid = 数值 + 特殊值。
+     */
+    private Map<String, String> invalid;
     /** 位表映射：{"0": 运行, "2": 低压故障"}（按 bit 位号取标签） */
     private Map<String, String> bits;
     /** group 的循环次数（引用前文字段，如 "$驱动电机个数"） */

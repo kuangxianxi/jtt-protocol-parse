@@ -12,9 +12,13 @@ import com.xx.jttprotocolparse.core.model.ProtocolSpec;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+
+import com.xx.jttprotocolparse.core.model.FieldSpec;
+import com.xx.jttprotocolparse.core.model.SubTypeSpec;
 
 /**
  * 协议描述加载器。
@@ -105,6 +109,7 @@ public final class DescriptorRegistry {
         String display = file.vendor != null && !file.vendor.isBlank() ? file.vendor : vendor;
         ProtocolSpec d = toSpec(file, display);
         resolveSubtypeRefs(d);
+        ensureMapInvalidExclusion(d);
         return d;
     }
 
@@ -164,6 +169,34 @@ public final class DescriptorRegistry {
                 throw new IllegalStateException("subtypeRef 不支持链式引用: " + ref + "（报文 " + cmd.getName() + "）");
             }
             cmd.setSubtype(target.getSubtype());
+        }
+    }
+
+    /**
+     * map 与 invalid 表达两类不相交的字段（纯枚举 / 数值+特殊值），
+     * 同字段双表 = 配置错误，加载期直接失败（对齐「文件缺失/未登记直接失败」的严格性）。
+     */
+    private static void ensureMapInvalidExclusion(ProtocolSpec d) {
+        for (CommandSpec cmd : d.getCommands().all()) {
+            checkFields(cmd.getBody(), "命令 " + cmd.getName());
+            if (cmd.getSubtype() != null) {
+                for (SubTypeSpec st : cmd.getSubtype().all()) {
+                    checkFields(st.getBody(), "子报文 " + st.getName());
+                }
+            }
+        }
+    }
+
+    /** map 与 invalid 互斥；group 嵌套递归。包级可见，供测试直接驱动 */
+    static void checkFields(List<FieldSpec> fields, String owner) {
+        if (fields == null) {
+            return;
+        }
+        for (FieldSpec f : fields) {
+            if (f.getMap() != null && f.getInvalid() != null) {
+                throw new IllegalStateException(owner + " 字段「" + f.getLabel() + "」不可同时声明 map 与 invalid");
+            }
+            checkFields(f.getFields(), owner);
         }
     }
 

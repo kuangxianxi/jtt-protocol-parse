@@ -2,6 +2,7 @@ package com.xx.jttprotocolparse.core.model;
 
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -23,6 +24,11 @@ public class SubTypeTable {
 
     public SubTypeSpec get(int type) {
         return byType.get(type);
+    }
+
+    /** 全部子类型定义（含重复 subtypeRef 引用的） */
+    public Collection<SubTypeSpec> all() {
+        return byType.values();
     }
 
     public boolean isEmpty() {
