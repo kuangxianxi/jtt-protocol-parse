@@ -123,9 +123,9 @@ public final class FieldCodec {
             n.setValue(bitsLabel(f.getBits(), u, raw.length));
             return;
         }
-        // 位段：每段合成值查表，未命中显示该段十进制；未定义段（保留位）不输出
+        // 位段：有 label 的段输出为子节点行，无 label 的段拼接进节点值
         if (f.getSegments() != null && !f.getSegments().isEmpty()) {
-            n.setValue(segmentsLabel(f.getSegments(), u));
+            applySegments(f.getSegments(), u, n);
             return;
         }
         // 枚举映射（按原值）；未命中直接显示原值
@@ -239,15 +239,22 @@ public final class FieldCodec {
         return on.isEmpty() ? "无置位" : String.join("、", on);
     }
 
-    /** 位段映射：每段取位域合成值查「值 → 中文」，未命中显示该段十进制原值 */
-    private static String segmentsLabel(List<SegmentSpec> segments, long u) {
-        List<String> out = new ArrayList<>();
+    /** 位段映射：有 label 的段输出为子节点行（label: 值），无 label 的段拼接进节点值；未命中显示该段十进制原值 */
+    private static void applySegments(List<SegmentSpec> segments, long u, Node n) {
+        List<String> inline = new ArrayList<>();
         for (SegmentSpec s : segments) {
             int value = (int) ((u >> s.getStart()) & ((1L << s.getWidth()) - 1));
             String hit = s.getValues() == null ? null : s.getValues().get(String.valueOf(value));
-            out.add(hit != null ? hit : String.valueOf(value));
+            String text = hit != null ? hit : String.valueOf(value);
+            if (s.getLabel() == null) {
+                inline.add(text);
+            } else {
+                n.add(new Node(s.getLabel()).setValue(text));
+            }
         }
-        return String.join("；", out);
+        if (!inline.isEmpty()) {
+            n.setValue(String.join("；", inline));
+        }
     }
 
     private static String plain(double d) {

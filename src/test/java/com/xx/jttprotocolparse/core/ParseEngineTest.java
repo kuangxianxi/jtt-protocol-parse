@@ -118,12 +118,12 @@ class ParseEngineTest {
         assertEquals("10", value(probe.getChildren(), "探针温度"));
 
         Node position = r.getBody().get(5);
-        assertEquals("无置位", value(position.getChildren(), "定位状态"));
+        assertEquals("有效定位；北纬；东经", value(position.getChildren(), "定位状态"));
         assertEquals("123.456789", value(position.getChildren(), "经度"));
 
         Node alarm = r.getBody().get(7);
         assertEquals("一级故障", value(alarm.getChildren(), "最高报警等级"));
-        assertEquals("bit0 温度差异报警", value(alarm.getChildren(), "通用报警标志"));
+        assertEquals("温度差异报警" + "；正常".repeat(18), value(alarm.getChildren(), "通用报警标志"));
         Node fault = node(alarm.getChildren(), "可充电储能装置故障代码列表 1");
         assertNotNull(fault);
         assertEquals("00000001", value(fault.getChildren(), "故障代码"));
@@ -144,6 +144,7 @@ class ParseEngineTest {
 
         Node ext = r.getBody().get(10);
         assertEquals("22", value(ext.getChildren(), "自定义数据长度"));
+        assertEquals("有CAN数据；无TF卡", value(ext.getChildren(), "终端状态"));
         assertEquals("1", value(ext.getChildren(), "Can帧个数"));
         Node can = node(ext.getChildren(), "CAN帧列表 1");
         assertNotNull(can);

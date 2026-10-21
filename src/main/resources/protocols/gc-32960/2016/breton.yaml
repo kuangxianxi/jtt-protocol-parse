@@ -285,10 +285,22 @@ label: GB/T 32960.3 新能源汽车国标
       body:
         - label: 定位状态
           type: u1
-          bits:
-            "0": 无效定位
-            "1": 南纬
-            "2": 西经
+          segments:
+            - start: 0
+              width: 1
+              values:
+                "0": 有效定位
+                "1": 无效定位
+            - start: 1
+              width: 1
+              values:
+                "0": 北纬
+                "1": 南纬
+            - start: 2
+              width: 1
+              values:
+                "0": 东经
+                "1": 西经
         - label: 经度
           type: u4
           scale: 0.000001
@@ -384,26 +396,102 @@ label: GB/T 32960.3 新能源汽车国标
             "0xFF": 无效
         - label: 通用报警标志
           type: u4
-          bits:
-            "0": 温度差异报警
-            "1": 电池高温报警
-            "2": 车载储能装置类型过压报警
-            "3": 车载储能装置类型欠压报警
-            "4": SOC低报警
-            "5": 电池单体过压报警
-            "6": 电池单体欠压报警
-            "7": SOC过高报警
-            "8": SOC跳变报警
-            "9": 可充电储能系统不匹配报警
-            "10": 电池单体一致性差报警
-            "11": 绝缘报警
-            "12": DC-DC温度报警
-            "13": 制动系统报警
-            "14": DC-DC状态报警
-            "15": 驱动电机控制器温度报警
-            "16": 高压互锁状态报警
-            "17": 驱动电机温度报警
-            "18": 车载储能装置类型过充
+          segments:
+            - start: 0
+              width: 1
+              values:
+                "0": 正常
+                "1": 温度差异报警
+            - start: 1
+              width: 1
+              values:
+                "0": 正常
+                "1": 电池高温报警
+            - start: 2
+              width: 1
+              values:
+                "0": 正常
+                "1": 车载储能装置类型过压报警
+            - start: 3
+              width: 1
+              values:
+                "0": 正常
+                "1": 车载储能装置类型欠压报警
+            - start: 4
+              width: 1
+              values:
+                "0": 正常
+                "1": SOC低报警
+            - start: 5
+              width: 1
+              values:
+                "0": 正常
+                "1": 电池单体过压报警
+            - start: 6
+              width: 1
+              values:
+                "0": 正常
+                "1": 电池单体欠压报警
+            - start: 7
+              width: 1
+              values:
+                "0": 正常
+                "1": SOC过高报警
+            - start: 8
+              width: 1
+              values:
+                "0": 正常
+                "1": SOC跳变报警
+            - start: 9
+              width: 1
+              values:
+                "0": 正常
+                "1": 可充电储能系统不匹配报警
+            - start: 10
+              width: 1
+              values:
+                "0": 正常
+                "1": 电池单体一致性差报警
+            - start: 11
+              width: 1
+              values:
+                "0": 正常
+                "1": 绝缘报警
+            - start: 12
+              width: 1
+              values:
+                "0": 正常
+                "1": DC-DC温度报警
+            - start: 13
+              width: 1
+              values:
+                "0": 正常
+                "1": 制动系统报警
+            - start: 14
+              width: 1
+              values:
+                "0": 正常
+                "1": DC-DC状态报警
+            - start: 15
+              width: 1
+              values:
+                "0": 正常
+                "1": 驱动电机控制器温度报警
+            - start: 16
+              width: 1
+              values:
+                "0": 正常
+                "1": 高压互锁状态报警
+            - start: 17
+              width: 1
+              values:
+                "0": 正常
+                "1": 驱动电机温度报警
+            - start: 18
+              width: 1
+              values:
+                "0": 正常
+                "1": 车载储能装置类型过充
         - label: 可充电储能装置故障总数
           type: u1
           invalid:
@@ -549,11 +637,21 @@ label: GB/T 32960.3 新能源汽车国标
           type: u2
         - label: 终端状态
           type: u1
-          bits:
-            "0": 无CAN数据
+          segments:
+            - start: 0
+              width: 1
+              values:
+                "0": 有CAN数据
+                "1": 无CAN数据
+            - start: 1
+              width: 2
+              values:
+                "0": 无TF卡
+                "1": 有TF卡，初始化
+                "2": 有TF卡，异常
+                "3": 有TF卡，正常
         - label: 保留
-          type: raw
-          length: 1
+          type: u1
         - label: 方向
           type: u2
         - label: Can帧个数

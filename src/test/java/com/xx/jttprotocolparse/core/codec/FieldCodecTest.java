@@ -110,6 +110,29 @@ class FieldCodecTest {
     }
 
     @Test
+    void segments带label按子节点行展示() {
+        FieldSpec f = new FieldSpec()
+                .setLabel("终端状态")
+                .setType("u1")
+                .setSegments(List.of(
+                        new SegmentSpec().setLabel("CAN数据").setStart(0)
+                                .setValues(Map.of("0", "有CAN数据", "1", "无CAN数据")),
+                        new SegmentSpec().setLabel("TF卡").setStart(1).setWidth(2)
+                                .setValues(Map.of("0", "无TF卡", "1", "有TF卡，初始化", "2", "有TF卡，异常", "3", "有TF卡，正常"))));
+        Cursor cur = new Cursor(new byte[]{0x06}, 0);
+        List<com.xx.jttprotocolparse.core.result.Issue> issues = new ArrayList<>();
+        Node n = FieldCodec.parseOne(f, cur, null, issues, "终端状态");
+
+        assertTrue(issues.isEmpty(), issues.toString());
+        assertNull(n.getValue());                       // 全部段有 label：不拼接主值
+        assertEquals(2, n.getChildren().size());
+        assertEquals("CAN数据", n.getChildren().get(0).getLabel());
+        assertEquals("有CAN数据", n.getChildren().get(0).getValue());
+        assertEquals("TF卡", n.getChildren().get(1).getLabel());
+        assertEquals("有TF卡，正常", n.getChildren().get(1).getValue());
+    }
+
+    @Test
     void segments未命中显示该段十进制() {
         FieldSpec f = new FieldSpec()
                 .setLabel("终端状态")
