@@ -123,7 +123,15 @@ class ParseEngineTest {
 
         Node alarm = r.getBody().get(7);
         assertEquals("一级故障", value(alarm.getChildren(), "最高报警等级"));
-        assertEquals("温度差异报警" + "；正常".repeat(18), value(alarm.getChildren(), "通用报警标志"));
+        // 通用报警标志：19 段各带 label，输出为子节点行（label: 值）
+        Node flags = node(alarm.getChildren(), "通用报警标志");
+        assertNotNull(flags, "通用报警标志节点缺失");
+        assertEquals(19, flags.getChildren().size());
+        Node flag0 = flags.getChildren().get(0);
+        assertEquals("温度差异报警", flag0.getLabel());
+        assertEquals("温度差异报警", flag0.getValue());   // 样例置位 bit0
+        assertEquals("正常", flags.getChildren().get(1).getValue());
+        assertEquals("正常", flags.getChildren().get(18).getValue());
         Node fault = node(alarm.getChildren(), "可充电储能装置故障代码列表 1");
         assertNotNull(fault);
         assertEquals("00000001", value(fault.getChildren(), "故障代码"));

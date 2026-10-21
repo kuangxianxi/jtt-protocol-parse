@@ -397,97 +397,116 @@ label: GB/T 32960.3 新能源汽车国标
         - label: 通用报警标志
           type: u4
           segments:
-            - start: 0
+            - label: 温度差异报警
+              start: 0
               width: 1
               values:
                 "0": 正常
                 "1": 温度差异报警
-            - start: 1
+            - label: 电池高温报警
+              start: 1
               width: 1
               values:
                 "0": 正常
                 "1": 电池高温报警
-            - start: 2
+            - label: 车载储能装置类型过压报警
+              start: 2
               width: 1
               values:
                 "0": 正常
                 "1": 车载储能装置类型过压报警
-            - start: 3
+            - label: 车载储能装置类型欠压报警
+              start: 3
               width: 1
               values:
                 "0": 正常
                 "1": 车载储能装置类型欠压报警
-            - start: 4
+            - label: SOC低报警
+              start: 4
               width: 1
               values:
                 "0": 正常
                 "1": SOC低报警
-            - start: 5
+            - label: 电池单体过压报警
+              start: 5
               width: 1
               values:
                 "0": 正常
                 "1": 电池单体过压报警
-            - start: 6
+            - label: 电池单体欠压报警
+              start: 6
               width: 1
               values:
                 "0": 正常
                 "1": 电池单体欠压报警
-            - start: 7
+            - label: SOC过高报警
+              start: 7
               width: 1
               values:
                 "0": 正常
                 "1": SOC过高报警
-            - start: 8
+            - label: SOC跳变报警
+              start: 8
               width: 1
               values:
                 "0": 正常
                 "1": SOC跳变报警
-            - start: 9
+            - label: 可充电储能系统不匹配报警
+              start: 9
               width: 1
               values:
                 "0": 正常
                 "1": 可充电储能系统不匹配报警
-            - start: 10
+            - label: 电池单体一致性差报警
+              start: 10
               width: 1
               values:
                 "0": 正常
                 "1": 电池单体一致性差报警
-            - start: 11
+            - label: 绝缘报警
+              start: 11
               width: 1
               values:
                 "0": 正常
                 "1": 绝缘报警
-            - start: 12
+            - label: DC-DC温度报警
+              start: 12
               width: 1
               values:
                 "0": 正常
                 "1": DC-DC温度报警
-            - start: 13
+            - label: 制动系统报警
+              start: 13
               width: 1
               values:
                 "0": 正常
                 "1": 制动系统报警
-            - start: 14
+            - label: DC-DC状态报警
+              start: 14
               width: 1
               values:
                 "0": 正常
                 "1": DC-DC状态报警
-            - start: 15
+            - label: 驱动电机控制器温度报警
+              start: 15
               width: 1
               values:
                 "0": 正常
                 "1": 驱动电机控制器温度报警
-            - start: 16
+            - label: 高压互锁状态报警
+              start: 16
               width: 1
               values:
                 "0": 正常
                 "1": 高压互锁状态报警
-            - start: 17
+            - label: 驱动电机温度报警
+              start: 17
               width: 1
               values:
                 "0": 正常
                 "1": 驱动电机温度报警
-            - start: 18
+            - label: 车载储能装置类型过充
+              start: 18
               width: 1
               values:
                 "0": 正常
