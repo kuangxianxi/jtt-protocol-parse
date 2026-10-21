@@ -397,120 +397,120 @@ label: GB/T 32960.3 新能源汽车国标
         - label: 通用报警标志
           type: u4
           segments:
-            - label: 温度差异报警
+            - label: 温度差异
               start: 0
               width: 1
               values:
                 "0": 正常
-                "1": 温度差异报警
-            - label: 电池高温报警
+                "1": 报警
+            - label: 电池高温
               start: 1
               width: 1
               values:
                 "0": 正常
-                "1": 电池高温报警
-            - label: 车载储能装置类型过压报警
+                "1": 报警
+            - label: 车载储能装置类型过压
               start: 2
               width: 1
               values:
                 "0": 正常
-                "1": 车载储能装置类型过压报警
-            - label: 车载储能装置类型欠压报警
+                "1": 报警
+            - label: 车载储能装置类型欠压
               start: 3
               width: 1
               values:
                 "0": 正常
-                "1": 车载储能装置类型欠压报警
-            - label: SOC低报警
+                "1": 报警
+            - label: SOC低
               start: 4
               width: 1
               values:
                 "0": 正常
-                "1": SOC低报警
-            - label: 电池单体过压报警
+                "1": 报警
+            - label: 电池单体过压
               start: 5
               width: 1
               values:
                 "0": 正常
-                "1": 电池单体过压报警
-            - label: 电池单体欠压报警
+                "1": 报警
+            - label: 电池单体欠压
               start: 6
               width: 1
               values:
                 "0": 正常
-                "1": 电池单体欠压报警
-            - label: SOC过高报警
+                "1": 报警
+            - label: SOC过高
               start: 7
               width: 1
               values:
                 "0": 正常
-                "1": SOC过高报警
-            - label: SOC跳变报警
+                "1": 报警
+            - label: SOC跳变
               start: 8
               width: 1
               values:
                 "0": 正常
-                "1": SOC跳变报警
-            - label: 可充电储能系统不匹配报警
+                "1": 报警
+            - label: 可充电储能系统不匹配
               start: 9
               width: 1
               values:
                 "0": 正常
-                "1": 可充电储能系统不匹配报警
-            - label: 电池单体一致性差报警
+                "1": 报警
+            - label: 电池单体一致性差
               start: 10
               width: 1
               values:
                 "0": 正常
-                "1": 电池单体一致性差报警
-            - label: 绝缘报警
+                "1": 报警
+            - label: 绝缘
               start: 11
               width: 1
               values:
                 "0": 正常
-                "1": 绝缘报警
-            - label: DC-DC温度报警
+                "1": 报警
+            - label: DC-DC温度
               start: 12
               width: 1
               values:
                 "0": 正常
-                "1": DC-DC温度报警
-            - label: 制动系统报警
+                "1": 报警
+            - label: 制动系统
               start: 13
               width: 1
               values:
                 "0": 正常
-                "1": 制动系统报警
-            - label: DC-DC状态报警
+                "1": 报警
+            - label: DC-DC状态
               start: 14
               width: 1
               values:
                 "0": 正常
-                "1": DC-DC状态报警
-            - label: 驱动电机控制器温度报警
+                "1": 报警
+            - label: 驱动电机控制器温度
               start: 15
               width: 1
               values:
                 "0": 正常
-                "1": 驱动电机控制器温度报警
-            - label: 高压互锁状态报警
+                "1": 报警
+            - label: 高压互锁状态
               start: 16
               width: 1
               values:
                 "0": 正常
-                "1": 高压互锁状态报警
-            - label: 驱动电机温度报警
+                "1": 报警
+            - label: 驱动电机温度
               start: 17
               width: 1
               values:
                 "0": 正常
-                "1": 驱动电机温度报警
+                "1": 报警
             - label: 车载储能装置类型过充
               start: 18
               width: 1
               values:
                 "0": 正常
-                "1": 车载储能装置类型过充
+                "1": 报警
         - label: 可充电储能装置故障总数
           type: u1
           invalid:
@@ -657,12 +657,14 @@ label: GB/T 32960.3 新能源汽车国标
         - label: 终端状态
           type: u1
           segments:
-            - start: 0
+            - label: CAN数据状态
+              start: 0
               width: 1
               values:
                 "0": 有CAN数据
                 "1": 无CAN数据
-            - start: 1
+            - label: TF卡状态
+              start: 1
               width: 2
               values:
                 "0": 无TF卡

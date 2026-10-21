@@ -128,8 +128,8 @@ class ParseEngineTest {
         assertNotNull(flags, "通用报警标志节点缺失");
         assertEquals(19, flags.getChildren().size());
         Node flag0 = flags.getChildren().get(0);
-        assertEquals("温度差异报警", flag0.getLabel());
-        assertEquals("温度差异报警", flag0.getValue());   // 样例置位 bit0
+        assertEquals("温度差异", flag0.getLabel());
+        assertEquals("报警", flag0.getValue());   // 样例置位 bit0
         assertEquals("正常", flags.getChildren().get(1).getValue());
         assertEquals("正常", flags.getChildren().get(18).getValue());
         Node fault = node(alarm.getChildren(), "可充电储能装置故障代码列表 1");
@@ -152,7 +152,14 @@ class ParseEngineTest {
 
         Node ext = r.getBody().get(10);
         assertEquals("22", value(ext.getChildren(), "自定义数据长度"));
-        assertEquals("有CAN数据；无TF卡", value(ext.getChildren(), "终端状态"));
+        // 终端状态：两段各带 label，输出为子节点行
+        Node terminal = node(ext.getChildren(), "终端状态");
+        assertNotNull(terminal, "终端状态节点缺失");
+        assertEquals(2, terminal.getChildren().size());
+        assertEquals("CAN数据状态", terminal.getChildren().get(0).getLabel());
+        assertEquals("有CAN数据", terminal.getChildren().get(0).getValue());   // 样例 0x00
+        assertEquals("TF卡状态", terminal.getChildren().get(1).getLabel());
+        assertEquals("无TF卡", terminal.getChildren().get(1).getValue());
         assertEquals("1", value(ext.getChildren(), "Can帧个数"));
         Node can = node(ext.getChildren(), "CAN帧列表 1");
         assertNotNull(can);
